@@ -1,0 +1,12 @@
+{
+  "spawn": { "sounds": ["ransom_in_minecraft:spawn"] },
+  "jumpscare": { "sounds": ["ransom_in_minecraft:jumpscare"] },
+  "jumpscare2": { "sounds": ["ransom_in_minecraft:jumpscare2"] },
+  "bowomp": { "sounds": ["ransom_in_minecraft:bowomp"] },
+  "ransom_success": { "sounds": ["ransom_in_minecraft:ransom_success"] },
+  "soundtrack": {
+    "sounds": [
+      { "name": "ransom_in_minecraft:soundtrack", "stream": true }
+    ]
+  }
+}

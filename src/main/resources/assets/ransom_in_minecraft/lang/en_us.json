@@ -1,0 +1,14 @@
+{
+  "ransom.command.started": "Ransom is already watching.",
+  "ransom.command.busy": "An encounter is already running.",
+  "ransom.hotbar_locked": "HOTBAR LOCKED",
+  "ransom.tools_locked": "YOUR HOTBAR HAVE BEEN ENCRYPTED",
+  "ransom.demand": "FIND INFECTED BLOCKS\nRETURN MY COINS\nOR YOUR ITEMS WILL BE DESTROYED",
+  "ransom.hold": "HOLD USE: %s%%",
+  "ransom.found": "+%s COINS",
+  "ransom.failed": "TIME EXPIRED",
+  "death.attack.ransom_debt": "%1$s died from debt",
+  "death.attack.ransom_debt_no_coins": "%1$s did not even try to escape the debt",
+  "death.attack.ransom_debt_inattentive": "%1$s was not paying attention",
+  "death.attack.ransom_debt_late": "%1$s did not find the money in time"
+}

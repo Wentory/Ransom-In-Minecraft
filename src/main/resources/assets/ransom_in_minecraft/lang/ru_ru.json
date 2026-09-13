@@ -1,0 +1,14 @@
+{
+  "ransom.command.started": "Ransom уже рядом.",
+  "ransom.command.busy": "Встреча уже идёт.",
+  "ransom.hotbar_locked": "ХОТБАР ЗАБЛОКИРОВАН",
+  "ransom.tools_locked": "ТВОЙ ХОТБАР ЗАШИФРОВАН",
+  "ransom.demand": "НАЙДИ ЗАРАЖЁННЫЕ БЛОКИ\nВЕРНИ МОИ МОНЕТЫ\nOR YOUR ITEMS WILL BE DESTROYED",
+  "ransom.hold": "УДЕРЖИВАЙ ПКМ: %s%%",
+  "ransom.found": "+%s МОНЕТ",
+  "ransom.failed": "ВРЕМЯ ВЫШЛО",
+  "death.attack.ransom_debt": "%1$s умер от долгов",
+  "death.attack.ransom_debt_no_coins": "%1$s даже не пытался спастись от долгов",
+  "death.attack.ransom_debt_inattentive": "%1$s оказался невнимательным",
+  "death.attack.ransom_debt_late": "%1$s не успел найти деньги"
+}
