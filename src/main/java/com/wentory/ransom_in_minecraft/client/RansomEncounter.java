@@ -1,6 +1,7 @@
 package com.wentory.ransom_in_minecraft.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.SheetedDecalTextureGenerator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.wentory.ransom_in_minecraft.ClientConfig;
 import com.wentory.ransom_in_minecraft.RansomInMinecraft;
@@ -12,7 +13,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
@@ -47,7 +47,6 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import com.wentory.ransom_in_minecraft.mixin.ItemInHandRendererInvoker;
 import com.wentory.ransom_in_minecraft.mixin.SoundEngineAccessor;
 import com.wentory.ransom_in_minecraft.mixin.SoundManagerAccessor;
-import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -71,6 +70,7 @@ public final class RansomEncounter {
     private static final ResourceLocation POPUP_2 = texture("popup2.png");
     private static final ResourceLocation WIN = texture("win.png");
     private static final ResourceLocation INFECTED_GLITCH = texture("glitch.png");
+    private static final RenderType INFECTED_GLITCH_LAYER = RansomRenderTypes.infectedGlitch(INFECTED_GLITCH);
     private static final ResourceLocation NUGGET = ResourceLocation.withDefaultNamespace("textures/item/gold_nugget.png");
     private static final ResourceLocation[] WEIRD_TEXTURES = {
             ResourceLocation.withDefaultNamespace("textures/block/command_block_front.png"),
@@ -142,23 +142,22 @@ public final class RansomEncounter {
     }
 
     /**
-     * Preserve an active ransom across a deliberate disconnect.  The server
-     * releases the player's inventory while they are absent; after the next
-     * login the normal recovery scare locks it again and rebuilds the zone.
+     * Clear only the client session when leaving a world. The server keeps the
+     * encounter in that world's player data and explicitly sends it back when
+     * the player rejoins the same world.
      */
     public static void handleDisconnect(Minecraft minecraft) {
-        if (phase != Phase.WARNING && phase != Phase.JUMPSCARE
-                && phase != Phase.RANSOM && phase != Phase.ESCAPE_SCARE) return;
-
-        respawnCoins = coins;
-        respawnTargetCoins = targetCoins;
-        respawnPhaseTicks = phase == Phase.ESCAPE_SCARE
-                ? escapeResumePhaseTicks + phaseTicks
-                : phase == Phase.RANSOM ? phaseTicks : 0;
-        respawnRansomPending = true;
+        respawnCoins = 0;
+        respawnTargetCoins = TARGET_COINS;
+        respawnPhaseTicks = 0;
+        respawnRansomPending = false;
         respawnRecoveryScare = false;
+        pendingFailureCoins = 0;
+        pendingFailureDeleteHotbar = false;
         phase = Phase.IDLE;
         phaseTicks = 0;
+        coins = 0;
+        targetCoins = TARGET_COINS;
         POPUPS.clear();
         INFECTED.clear();
         infectionCenter = null;
@@ -640,31 +639,30 @@ public final class RansomEncounter {
 
     @SubscribeEvent
     public static void renderInfectedBlocks(RenderLevelStageEvent event) {
-        if (phase != Phase.RANSOM || event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES || INFECTED.isEmpty()) return;
+        if (phase != Phase.RANSOM || event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRIPWIRE_BLOCKS || INFECTED.isEmpty()) return;
         Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.level == null) return;
         PoseStack poseStack = event.getPoseStack();
         Vec3 camera = event.getCamera().getPosition();
-        RenderType renderType = RenderType.entityTranslucentEmissive(INFECTED_GLITCH);
         MultiBufferSource.BufferSource buffers = minecraft.renderBuffers().bufferSource();
         int glitchFrame = (phaseTicks / 2) % 6;
-        VertexConsumer consumer = new AnimatedSheetVertexConsumer(buffers.getBuffer(renderType), glitchFrame, 6);
+        VertexConsumer animated = new AnimatedSheetVertexConsumer(buffers.getBuffer(INFECTED_GLITCH_LAYER), glitchFrame, 6, 128);
 
-        poseStack.pushPose();
-        poseStack.translate(-camera.x, -camera.y, -camera.z);
-        Matrix4f matrix = poseStack.last().pose();
-        int alpha = 128;
         for (InfectedBlock infected : INFECTED) {
             BlockState state = minecraft.level.getBlockState(infected.pos);
             if (net.minecraft.world.level.block.Block.isShapeFullBlock(state.getCollisionShape(minecraft.level, infected.pos))) {
-                for (Direction face : Direction.values()) {
-                    if (minecraft.level.getBlockState(infected.pos.relative(face)).isAir()) {
-                        renderGlitchPatch(consumer, matrix, infected.pos, face, alpha);
-                    }
-                }
+                poseStack.pushPose();
+                poseStack.translate(
+                        infected.pos.getX() - camera.x,
+                        infected.pos.getY() - camera.y,
+                        infected.pos.getZ() - camera.z);
+                VertexConsumer decal = new SheetedDecalTextureGenerator(animated, poseStack.last(), 1.0F);
+                minecraft.getBlockRenderer().renderBreakingTexture(
+                        state, infected.pos, minecraft.level, poseStack, decal);
+                poseStack.popPose();
             }
         }
-        poseStack.popPose();
-        buffers.endBatch(renderType);
+        buffers.endBatch(INFECTED_GLITCH_LAYER);
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
@@ -1014,56 +1012,6 @@ public final class RansomEncounter {
         int height = 49 + RANDOM.nextInt(29);
         int lifetime = initial ? 45 + RANDOM.nextInt(36) : 35 + RANDOM.nextInt(66);
         POPUPS.add(new Popup(phaseTicks, lifetime, RANDOM.nextFloat(), RANDOM.nextFloat(), width, height, variant));
-    }
-
-    private static void renderGlitchPatch(VertexConsumer consumer, Matrix4f matrix, BlockPos pos, Direction face, int alpha) {
-        float x = pos.getX();
-        float y = pos.getY();
-        float z = pos.getZ();
-        float a = 0.002F;
-        float b = 0.998F;
-        float outside = 0.0005F;
-
-        switch (face) {
-            case UP -> quad(consumer, matrix,
-                    x + a, y + 1 + outside, z + a, x + a, y + 1 + outside, z + b,
-                    x + b, y + 1 + outside, z + b, x + b, y + 1 + outside, z + a, face, alpha);
-            case DOWN -> quad(consumer, matrix,
-                    x + a, y - outside, z + b, x + a, y - outside, z + a,
-                    x + b, y - outside, z + a, x + b, y - outside, z + b, face, alpha);
-            case NORTH -> quad(consumer, matrix,
-                    x + b, y + a, z - outside, x + a, y + a, z - outside,
-                    x + a, y + b, z - outside, x + b, y + b, z - outside, face, alpha);
-            case SOUTH -> quad(consumer, matrix,
-                    x + a, y + a, z + 1 + outside, x + b, y + a, z + 1 + outside,
-                    x + b, y + b, z + 1 + outside, x + a, y + b, z + 1 + outside, face, alpha);
-            case WEST -> quad(consumer, matrix,
-                    x - outside, y + a, z + a, x - outside, y + a, z + b,
-                    x - outside, y + b, z + b, x - outside, y + b, z + a, face, alpha);
-            case EAST -> quad(consumer, matrix,
-                    x + 1 + outside, y + a, z + b, x + 1 + outside, y + a, z + a,
-                    x + 1 + outside, y + b, z + a, x + 1 + outside, y + b, z + b, face, alpha);
-        }
-    }
-
-    private static void quad(VertexConsumer consumer, Matrix4f matrix,
-                             float x1, float y1, float z1, float x2, float y2, float z2,
-                             float x3, float y3, float z3, float x4, float y4, float z4,
-                             Direction face, int alpha) {
-        vertex(consumer, matrix, x1, y1, z1, 0, 1, face, alpha);
-        vertex(consumer, matrix, x2, y2, z2, 1, 1, face, alpha);
-        vertex(consumer, matrix, x3, y3, z3, 1, 0, face, alpha);
-        vertex(consumer, matrix, x4, y4, z4, 0, 0, face, alpha);
-    }
-
-    private static void vertex(VertexConsumer consumer, Matrix4f matrix, float x, float y, float z,
-                               float u, float v, Direction face, int alpha) {
-        consumer.addVertex(matrix, x, y, z)
-                .setColor(255, 255, 255, alpha)
-                .setUv(u, v)
-                .setOverlay(0)
-                .setLight(LightTexture.FULL_BRIGHT)
-                .setNormal(face.getStepX(), face.getStepY(), face.getStepZ());
     }
 
     private static void window(GuiGraphics graphics, int x, int y, int width, int height, String title) {

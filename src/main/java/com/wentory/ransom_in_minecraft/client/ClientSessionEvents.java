@@ -2,6 +2,7 @@ package com.wentory.ransom_in_minecraft.client;
 
 import com.wentory.ransom_in_minecraft.RansomInMinecraft;
 import com.wentory.ransom_in_minecraft.network.ClientInfectionTracker;
+import com.wentory.ransom_in_minecraft.network.ClientRansomResumeTracker;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -15,6 +16,7 @@ public final class ClientSessionEvents {
     @SubscribeEvent
     public static void loggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         RansomEncounter.handleDisconnect(Minecraft.getInstance());
+        ClientRansomResumeTracker.clear();
         ClientInfectionTracker.clear();
     }
 
