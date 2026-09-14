@@ -7,11 +7,17 @@ final class AnimatedSheetVertexConsumer implements VertexConsumer {
     private final VertexConsumer delegate;
     private final int frame;
     private final int frameCount;
+    private final int alpha;
 
     AnimatedSheetVertexConsumer(VertexConsumer delegate, int frame, int frameCount) {
+        this(delegate, frame, frameCount, 255);
+    }
+
+    AnimatedSheetVertexConsumer(VertexConsumer delegate, int frame, int frameCount, int alpha) {
         this.delegate = delegate;
         this.frame = Math.floorMod(frame, frameCount);
         this.frameCount = frameCount;
+        this.alpha = Math.max(0, Math.min(255, alpha));
     }
 
     @Override public VertexConsumer addVertex(float x, float y, float z) {
@@ -20,7 +26,7 @@ final class AnimatedSheetVertexConsumer implements VertexConsumer {
     }
 
     @Override public VertexConsumer setColor(int red, int green, int blue, int alpha) {
-        delegate.setColor(red, green, blue, alpha);
+        delegate.setColor(red, green, blue, alpha * this.alpha / 255);
         return this;
     }
 

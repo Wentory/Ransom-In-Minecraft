@@ -27,4 +27,10 @@ public final class ClientRansomResumeTracker {
         summonPending = false;
         return result;
     }
+
+    public static synchronized void clear() {
+        pending = null;
+        failureScarePending = null;
+        summonPending = false;
+    }
 }
