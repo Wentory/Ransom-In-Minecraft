@@ -1,17 +1,6 @@
 package com.wentory.ransom_in_minecraft.network;
-
-import com.wentory.ransom_in_minecraft.RansomInMinecraft;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
-
-public record RansomSummonPayload(boolean summon) implements CustomPacketPayload {
-    public static final Type<RansomSummonPayload> TYPE = new Type<>(
-            ResourceLocation.fromNamespaceAndPath(RansomInMinecraft.MODID, "ransom_summon"));
-    public static final StreamCodec<RegistryFriendlyByteBuf, RansomSummonPayload> STREAM_CODEC =
-            StreamCodec.composite(ByteBufCodecs.BOOL, RansomSummonPayload::summon, RansomSummonPayload::new);
-
-    @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
+import net.minecraft.network.FriendlyByteBuf;
+public record RansomSummonPayload(boolean summon){
+ static void encode(RansomSummonPayload p,FriendlyByteBuf b){b.writeBoolean(p.summon);}
+ static RansomSummonPayload decode(FriendlyByteBuf b){return new RansomSummonPayload(b.readBoolean());}
 }

@@ -20,33 +20,41 @@ final class AnimatedSheetVertexConsumer implements VertexConsumer {
         this.alpha = Math.max(0, Math.min(255, alpha));
     }
 
-    @Override public VertexConsumer addVertex(float x, float y, float z) {
-        delegate.addVertex(x, y, z);
+    @Override public VertexConsumer vertex(double x, double y, double z) {
+        delegate.vertex(x, y, z);
         return this;
     }
 
-    @Override public VertexConsumer setColor(int red, int green, int blue, int alpha) {
-        delegate.setColor(red, green, blue, alpha * this.alpha / 255);
+    @Override public VertexConsumer color(int red, int green, int blue, int alpha) {
+        delegate.color(red, green, blue, alpha * this.alpha / 255);
         return this;
     }
 
-    @Override public VertexConsumer setUv(float u, float v) {
-        delegate.setUv(u, (frame + v) / frameCount);
+    @Override public VertexConsumer uv(float u, float v) {
+        delegate.uv(u, (frame + v) / frameCount);
         return this;
     }
 
-    @Override public VertexConsumer setUv1(int u, int v) {
-        delegate.setUv1(u, v);
+    @Override public VertexConsumer overlayCoords(int u, int v) {
+        delegate.overlayCoords(u, v);
         return this;
     }
 
-    @Override public VertexConsumer setUv2(int u, int v) {
-        delegate.setUv2(u, v);
+    @Override public VertexConsumer uv2(int u, int v) {
+        delegate.uv2(u, v);
         return this;
     }
 
-    @Override public VertexConsumer setNormal(float x, float y, float z) {
-        delegate.setNormal(x, y, z);
+    @Override public VertexConsumer normal(float x, float y, float z) {
+        delegate.normal(x, y, z);
         return this;
     }
+
+    @Override public void endVertex() { delegate.endVertex(); }
+
+    @Override public void defaultColor(int red, int green, int blue, int alpha) {
+        delegate.defaultColor(red, green, blue, alpha * this.alpha / 255);
+    }
+
+    @Override public void unsetDefaultColor() { delegate.unsetDefaultColor(); }
 }

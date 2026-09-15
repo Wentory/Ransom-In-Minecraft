@@ -12,14 +12,14 @@ import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.client.event.EntityRenderersEvent;
 
 @EventBusSubscriber(modid = RansomInMinecraft.MODID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
 public final class InfectedPlayerVisuals {
-    private static final ResourceLocation GLITCH = ResourceLocation.fromNamespaceAndPath(
+    private static final ResourceLocation GLITCH = new ResourceLocation(
             RansomInMinecraft.MODID, "textures/glitch.png");
     private InfectedPlayerVisuals() {}
 
@@ -46,15 +46,15 @@ public final class InfectedPlayerVisuals {
             poseStack.pushPose();
             poseStack.scale(1.035F, 1.035F, 1.035F);
             model.renderToBuffer(poseStack,
-                    buffers.getBuffer(RenderType.entityTranslucent(player.getSkin().texture())),
-                    packedLight, OverlayTexture.NO_OVERLAY, 0x70FF1010);
+                    buffers.getBuffer(RenderType.entityTranslucent(player.getSkinTextureLocation())),
+                    packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 0.06F, 0.06F, 0.44F);
             poseStack.popPose();
 
             int frame = (player.tickCount / 2) % 6;
             var animated = new AnimatedSheetVertexConsumer(
                     buffers.getBuffer(RenderType.entityTranslucentEmissive(GLITCH)), frame, 6);
             model.renderToBuffer(poseStack, animated,
-                    0x00F000F0, OverlayTexture.NO_OVERLAY, 0x80FFFFFF);
+                    0x00F000F0, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 0.5F);
         }
     }
 

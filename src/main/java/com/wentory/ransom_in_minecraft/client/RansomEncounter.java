@@ -1,5 +1,7 @@
 package com.wentory.ransom_in_minecraft.client;
 
+import com.wentory.ransom_in_minecraft.network.RansomNetwork;
+
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.SheetedDecalTextureGenerator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -32,18 +34,17 @@ import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.InputEvent;
-import net.neoforged.neoforge.client.event.RenderGuiEvent;
-import net.neoforged.neoforge.client.event.RenderHandEvent;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import net.neoforged.neoforge.client.event.ScreenEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.EventPriority;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.event.TickEvent.ClientTickEvent;
+import net.minecraftforge.client.event.InputEvent;
+import net.minecraftforge.client.event.RenderGuiEvent;
+import net.minecraftforge.client.event.RenderHandEvent;
+import net.minecraftforge.client.event.RenderLevelStageEvent;
+import net.minecraftforge.client.event.ScreenEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import com.wentory.ransom_in_minecraft.mixin.ItemInHandRendererInvoker;
 import com.wentory.ransom_in_minecraft.mixin.SoundEngineAccessor;
 import com.wentory.ransom_in_minecraft.mixin.SoundManagerAccessor;
@@ -71,12 +72,12 @@ public final class RansomEncounter {
     private static final ResourceLocation WIN = texture("win.png");
     private static final ResourceLocation INFECTED_GLITCH = texture("glitch.png");
     private static final RenderType INFECTED_GLITCH_LAYER = RansomRenderTypes.infectedGlitch(INFECTED_GLITCH);
-    private static final ResourceLocation NUGGET = ResourceLocation.withDefaultNamespace("textures/item/gold_nugget.png");
+    private static final ResourceLocation NUGGET = new ResourceLocation("textures/item/gold_nugget.png");
     private static final ResourceLocation[] WEIRD_TEXTURES = {
-            ResourceLocation.withDefaultNamespace("textures/block/command_block_front.png"),
-            ResourceLocation.withDefaultNamespace("textures/block/crying_obsidian.png"),
-            ResourceLocation.withDefaultNamespace("textures/block/nether_portal.png"),
-            ResourceLocation.withDefaultNamespace("textures/entity/end_portal.png")
+            new ResourceLocation("textures/block/command_block_front.png"),
+            new ResourceLocation("textures/block/crying_obsidian.png"),
+            new ResourceLocation("textures/block/nether_portal.png"),
+            new ResourceLocation("textures/entity/end_portal.png")
     };
 
     private static final int WARNING_TICKS = 48;
@@ -169,7 +170,8 @@ public final class RansomEncounter {
     }
 
     @SubscribeEvent
-    public static void clientTick(ClientTickEvent.Post event) {
+    public static void clientTick(ClientTickEvent event) {
+        if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) return;
         Minecraft minecraft = Minecraft.getInstance();
         var serverResume = ClientRansomResumeTracker.consume();
         if (serverResume != null) {
@@ -304,7 +306,7 @@ public final class RansomEncounter {
         // Index 9 is deliberately outside the nine real hotbar slots. Inventory#getSelected
         // therefore exposes an empty main hand without moving or replacing any item stack.
         minecraft.player.getInventory().selected = Inventory.getSelectionSize();
-        PacketDistributor.sendToServer(new RansomProgressPayload(coins, targetCoins, phaseTicks));
+        RansomNetwork.sendToServer(new RansomProgressPayload(coins, targetCoins, phaseTicks));
 
         int infectionRadius = infectionRadius();
         if (infectionCenter != null && minecraft.player.position().distanceToSqr(Vec3.atCenterOf(infectionCenter))
@@ -325,7 +327,7 @@ public final class RansomEncounter {
             phase = Phase.FAILED;
             phaseTicks = 0;
             minecraft.setScreen(null);
-            PacketDistributor.sendToServer(new RansomFailureArmedPayload(
+            RansomNetwork.sendToServer(new RansomFailureArmedPayload(
                     coins, ClientConfig.DELETE_HOTBAR_ON_FAILURE.get()));
             jumpscareSound = SimpleSoundInstance.forUI(RansomInMinecraft.JUMPSCARE2.get(), 1.0F, 1.0F);
             minecraft.getSoundManager().play(jumpscareSound);
@@ -436,7 +438,7 @@ public final class RansomEncounter {
         warningStartY = 0.08F + RANDOM.nextFloat() * 0.70F;
         lastMouseX = minecraft.mouseHandler.xpos();
         lastMouseY = minecraft.mouseHandler.ypos();
-        PacketDistributor.sendToServer(new RansomProgressPayload(coins, targetCoins, 0));
+        RansomNetwork.sendToServer(new RansomProgressPayload(coins, targetCoins, 0));
         play(minecraft, RansomInMinecraft.SPAWN.get(), 1.0F, 1.0F);
     }
 
@@ -444,7 +446,7 @@ public final class RansomEncounter {
         phase = Phase.JUMPSCARE;
         phaseTicks = 0;
         minecraft.setScreen(null);
-        PacketDistributor.sendToServer(new RansomProgressPayload(coins, targetCoins, 0));
+        RansomNetwork.sendToServer(new RansomProgressPayload(coins, targetCoins, 0));
         stopJumpscare(minecraft);
         jumpscareSound = SimpleSoundInstance.forUI(RansomInMinecraft.JUMPSCARE.get(), 1.0F, 1.0F);
         minecraft.getSoundManager().play(jumpscareSound);
@@ -490,7 +492,7 @@ public final class RansomEncounter {
             soundtrackPaused = false;
         }
         setServerRansomState(minecraft, true, false, 0);
-        PacketDistributor.sendToServer(new RansomProgressPayload(coins, targetCoins, phaseTicks));
+        RansomNetwork.sendToServer(new RansomProgressPayload(coins, targetCoins, phaseTicks));
     }
 
     private static void finishEscapePenalty(Minecraft minecraft) {
@@ -656,7 +658,7 @@ public final class RansomEncounter {
                         infected.pos.getX() - camera.x,
                         infected.pos.getY() - camera.y,
                         infected.pos.getZ() - camera.z);
-                VertexConsumer decal = new SheetedDecalTextureGenerator(animated, poseStack.last(), 1.0F);
+                VertexConsumer decal = new SheetedDecalTextureGenerator(animated, poseStack.last().pose(), poseStack.last().normal(), 1.0F);
                 minecraft.getBlockRenderer().renderBreakingTexture(
                         state, infected.pos, minecraft.level, poseStack, decal);
                 poseStack.popPose();
@@ -1182,7 +1184,7 @@ public final class RansomEncounter {
     private static void setServerRansomState(Minecraft minecraft, boolean active, boolean failure, int coins,
                                               int penaltyDamage, boolean deleteHotbar) {
         if (minecraft.getConnection() != null) {
-            PacketDistributor.sendToServer(new RansomStatePayload(active, failure, coins, penaltyDamage, deleteHotbar));
+            RansomNetwork.sendToServer(new RansomStatePayload(active, failure, coins, penaltyDamage, deleteHotbar));
         }
     }
 
@@ -1227,7 +1229,7 @@ public final class RansomEncounter {
     }
 
     private static ResourceLocation texture(String file) {
-        return ResourceLocation.fromNamespaceAndPath(RansomInMinecraft.MODID, "textures/" + file);
+        return new ResourceLocation(RansomInMinecraft.MODID, "textures/" + file);
     }
 
     private record InfectedBlock(BlockPos pos, int value) {

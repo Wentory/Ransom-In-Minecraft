@@ -15,15 +15,13 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import net.neoforged.neoforge.event.RegisterCommandsEvent;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.TickEvent.PlayerTickEvent;
+import net.minecraftforge.event.RegisterCommandsEvent;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -41,36 +39,17 @@ public final class RansomServerState {
 
     private RansomServerState() {}
 
-    public static void registerPayloads(RegisterPayloadHandlersEvent event) {
-        var registrar = event.registrar("1");
-        registrar.playToServer(RansomStatePayload.TYPE, RansomStatePayload.STREAM_CODEC,
-                (payload, context) -> {
-                    if (!(context.player() instanceof ServerPlayer player)) return;
-                    if (payload.penaltyDamage() > 0) damage(player, payload.penaltyDamage(), payload.coins());
-                    else if (payload.failure()) fail(player, payload.coins(), payload.deleteHotbar());
-                    else if (payload.active()) lockHands(player);
-                    else unlockHands(player);
-                });
-        registrar.playToClient(InfectionStatusPayload.TYPE, InfectionStatusPayload.STREAM_CODEC,
-                (payload, context) -> context.enqueueWork(() -> ClientInfectionTracker.accept(payload)));
-        registrar.playToServer(RansomProgressPayload.TYPE, RansomProgressPayload.STREAM_CODEC,
-                (payload, context) -> {
-                    if (context.player() instanceof ServerPlayer player) saveProgress(player, payload);
-                });
-        registrar.playToClient(RansomResumePayload.TYPE, RansomResumePayload.STREAM_CODEC,
-                (payload, context) -> context.enqueueWork(() -> ClientRansomResumeTracker.accept(payload)));
-        registrar.playToServer(RansomFailureArmedPayload.TYPE, RansomFailureArmedPayload.STREAM_CODEC,
-                (payload, context) -> {
-                    if (!(context.player() instanceof ServerPlayer player)) return;
-                    player.getPersistentData().putBoolean(FAILURE_ARMED, true);
-                    player.getPersistentData().putBoolean(FAILURE_DELETE_HOTBAR, payload.deleteHotbar());
-                    player.getPersistentData().putInt(COINS, Math.max(0, payload.coins()));
-                });
-        registrar.playToClient(RansomFailureScarePayload.TYPE, RansomFailureScarePayload.STREAM_CODEC,
-                (payload, context) -> context.enqueueWork(
-                        () -> ClientRansomResumeTracker.acceptFailureScare(payload)));
-        registrar.playToClient(RansomSummonPayload.TYPE, RansomSummonPayload.STREAM_CODEC,
-                (payload, context) -> context.enqueueWork(() -> ClientRansomResumeTracker.acceptSummon(payload)));
+    static void acceptState(ServerPlayer player, RansomStatePayload payload) {
+        if (payload.penaltyDamage() > 0) damage(player, payload.penaltyDamage(), payload.coins());
+        else if (payload.failure()) fail(player, payload.coins(), payload.deleteHotbar());
+        else if (payload.active()) lockHands(player);
+        else unlockHands(player);
+    }
+
+    static void armFailure(ServerPlayer player, RansomFailureArmedPayload payload) {
+        player.getPersistentData().putBoolean(FAILURE_ARMED, true);
+        player.getPersistentData().putBoolean(FAILURE_DELETE_HOTBAR, payload.deleteHotbar());
+        player.getPersistentData().putInt(COINS, Math.max(0, payload.coins()));
     }
 
     @SubscribeEvent
@@ -90,13 +69,13 @@ public final class RansomServerState {
 
     private static int summonRansom(ServerPlayer target) {
         if (target.getPersistentData().getBoolean(ACTIVE)) return 0;
-        PacketDistributor.sendToPlayer(target, new RansomSummonPayload(true));
+        RansomNetwork.sendTo(target, new RansomSummonPayload(true));
         return 1;
     }
 
     @SubscribeEvent
-    public static void keepMainHandEmpty(PlayerTickEvent.Post event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)
+    public static void keepMainHandEmpty(PlayerTickEvent event) {
+        if (event.phase != net.minecraftforge.event.TickEvent.Phase.END || !(event.player instanceof ServerPlayer player)
                 || !LOCKED_PLAYERS.containsKey(player.getUUID())) return;
         player.getInventory().selected = Inventory.getSelectionSize();
     }
@@ -137,14 +116,14 @@ public final class RansomServerState {
     public static void playerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer joining)) return;
         for (UUID infected : LOCKED_PLAYERS.keySet()) {
-            PacketDistributor.sendToPlayer(joining, new InfectionStatusPayload(infected, true));
+            RansomNetwork.sendTo(joining, new InfectionStatusPayload(infected, true));
         }
         if (joining.getPersistentData().getBoolean(FAILURE_ARMED)) {
-            PacketDistributor.sendToPlayer(joining, new RansomFailureScarePayload(
+            RansomNetwork.sendTo(joining, new RansomFailureScarePayload(
                     joining.getPersistentData().getInt(COINS),
                     joining.getPersistentData().getBoolean(FAILURE_DELETE_HOTBAR)));
         } else if (joining.getPersistentData().getBoolean(ACTIVE)) {
-            PacketDistributor.sendToPlayer(joining, new RansomResumePayload(
+            RansomNetwork.sendTo(joining, new RansomResumePayload(
                     joining.getPersistentData().getInt(COINS),
                     joining.getPersistentData().getInt(TARGET),
                     joining.getPersistentData().getInt(TICKS)));
@@ -177,7 +156,7 @@ public final class RansomServerState {
 
     private static void damage(ServerPlayer player, int amount, int coins) {
         ResourceKey<DamageType> key = ResourceKey.create(Registries.DAMAGE_TYPE,
-                ResourceLocation.fromNamespaceAndPath(RansomInMinecraft.MODID, "ransom_debt"));
+                new ResourceLocation(RansomInMinecraft.MODID, "ransom_debt"));
         Holder<DamageType> type = player.level().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE)
                 .getHolder(key).orElse(player.level().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE)
                         .getHolderOrThrow(net.minecraft.world.damagesource.DamageTypes.GENERIC));
@@ -197,7 +176,7 @@ public final class RansomServerState {
         LockedInventory previous = LOCKED_PLAYERS.putIfAbsent(player.getUUID(), new LockedInventory(
                 Inventory.isHotbarSlot(player.getInventory().selected) ? player.getInventory().selected : 0));
         if (previous == null) {
-            PacketDistributor.sendToAllPlayers(new InfectionStatusPayload(player.getUUID(), true));
+            RansomNetwork.sendToAll(new InfectionStatusPayload(player.getUUID(), true));
         }
         player.getInventory().selected = Inventory.getSelectionSize();
     }
@@ -210,7 +189,7 @@ public final class RansomServerState {
         LockedInventory locked = LOCKED_PLAYERS.remove(player.getUUID());
         if (locked != null) {
             player.getInventory().selected = locked.selectedSlot();
-            PacketDistributor.sendToAllPlayers(new InfectionStatusPayload(player.getUUID(), false));
+            RansomNetwork.sendToAll(new InfectionStatusPayload(player.getUUID(), false));
         }
         if (clearDebt) clearProgress(player);
     }
@@ -222,12 +201,12 @@ public final class RansomServerState {
         }
         player.getInventory().selected = locked != null ? locked.selectedSlot() : 0;
         if (locked != null) {
-            PacketDistributor.sendToAllPlayers(new InfectionStatusPayload(player.getUUID(), false));
+            RansomNetwork.sendToAll(new InfectionStatusPayload(player.getUUID(), false));
         }
         clearProgress(player);
     }
 
-    private static void saveProgress(ServerPlayer player, RansomProgressPayload payload) {
+    static void saveProgress(ServerPlayer player, RansomProgressPayload payload) {
         player.getPersistentData().putBoolean(ACTIVE, true);
         player.getPersistentData().putInt(COINS, Math.max(0, payload.coins()));
         player.getPersistentData().putInt(TARGET, Math.max(1, payload.targetCoins()));

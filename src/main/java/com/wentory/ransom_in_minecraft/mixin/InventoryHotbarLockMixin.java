@@ -29,7 +29,7 @@ public abstract class InventoryHotbarLockMixin {
         if (!RansomServerState.isHotbarLocked(inventory.player)) return;
         for (int slot = Inventory.getSelectionSize(); slot < 36; slot++) {
             ItemStack existing = inventory.getItem(slot);
-            if (ItemStack.isSameItemSameComponents(existing, incoming)
+            if (ItemStack.isSameItemSameTags(existing, incoming)
                     && existing.getCount() < existing.getMaxStackSize()) {
                 cir.setReturnValue(slot);
                 return;
