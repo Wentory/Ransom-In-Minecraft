@@ -38,6 +38,8 @@ import java.util.Map;
 import java.util.UUID;
 
 public final class RansomServerState {
+    private static final ResourceKey<DamageType> RANSOM_DAMAGE = ResourceKey.create(Registries.DAMAGE_TYPE,
+            Identifier.fromNamespaceAndPath(RansomFabric.MODID, "ransom_debt"));
     public static final AttachmentType<RansomPlayerData> DATA = AttachmentRegistry
             .<RansomPlayerData>builder().persistent(RansomPlayerData.CODEC).copyOnDeath()
             .buildAndRegister(Identifier.fromNamespaceAndPath(RansomFabric.MODID, "player_state"));
@@ -99,7 +101,13 @@ public final class RansomServerState {
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> playerLoggedIn(handler.player));
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> playerLoggedOut(handler.player));
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
-            if (entity instanceof ServerPlayer player) unlockHands(player, false);
+            if (entity instanceof ServerPlayer player) {
+                RansomPlayerData state = data(player);
+                if (state.active() && !state.failureArmed() && !source.is(RANSOM_DAMAGE))
+                    save(player, new RansomPlayerData(true, state.coins(), state.target() + 30,
+                            state.ticks(), false, state.deleteHotbar()));
+                unlockHands(player, false);
+            }
         });
         ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> playerLoggedIn(newPlayer));
     }
@@ -146,10 +154,8 @@ public final class RansomServerState {
     }
 
     private static void damage(ServerPlayer player, int amount, int coins) {
-        ResourceKey<DamageType> key = ResourceKey.create(Registries.DAMAGE_TYPE,
-                Identifier.fromNamespaceAndPath(RansomFabric.MODID, "ransom_debt"));
         Holder<DamageType> type = player.level().registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE)
-                .get(key).orElse(player.level().registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE)
+                .get(RANSOM_DAMAGE).orElse(player.level().registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE)
                         .getOrThrow(net.minecraft.world.damagesource.DamageTypes.GENERIC));
         String messageKey = coins <= 0 ? "death.attack.ransom_debt_no_coins"
                 : java.util.concurrent.ThreadLocalRandom.current().nextBoolean()
