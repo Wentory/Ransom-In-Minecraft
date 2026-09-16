@@ -155,7 +155,16 @@ public final class RansomServerState {
 
     @SubscribeEvent
     public static void playerDied(LivingDeathEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) unlockHands(player, false);
+        if (event.getEntity() instanceof ServerPlayer player) {
+            var data = player.getPersistentData();
+            if (data.getBoolean(ACTIVE).orElse(false)
+                    && !data.getBoolean(FAILURE_ARMED).orElse(false)
+                    && !event.getSource().is(ResourceKey.create(Registries.DAMAGE_TYPE,
+                            Identifier.fromNamespaceAndPath(RansomInMinecraft.MODID, "ransom_debt")))) {
+                data.putInt(TARGET, data.getInt(TARGET).orElse(100) + 30);
+            }
+            unlockHands(player, false);
+        }
     }
 
     @SubscribeEvent
