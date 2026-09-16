@@ -11,7 +11,7 @@ import com.wentory.ransom_in_minecraft.network.ClientRansomResumeTracker;
 import com.wentory.ransom_in_minecraft.network.RansomFailureArmedPayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -20,7 +20,7 @@ import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
@@ -45,6 +45,7 @@ import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import com.wentory.ransom_in_minecraft.mixin.ItemInHandRendererInvoker;
+import com.wentory.ransom_in_minecraft.mixin.InventorySelectionAccessor;
 import com.wentory.ransom_in_minecraft.mixin.SoundEngineAccessor;
 import com.wentory.ransom_in_minecraft.mixin.SoundManagerAccessor;
 import org.lwjgl.glfw.GLFW;
@@ -62,21 +63,21 @@ import java.util.Set;
  */
 @EventBusSubscriber(modid = RansomInMinecraft.MODID, value = Dist.CLIENT)
 public final class RansomEncounter {
-    private static final ResourceLocation RANSOM = texture("ransom.png");
-    private static final ResourceLocation BLOCK = texture("block.png");
-    private static final ResourceLocation JUMPSCARE_1 = texture("jumpscare1.png");
-    private static final ResourceLocation JUMPSCARE_2 = texture("jumpscare2.png");
-    private static final ResourceLocation POPUP_1 = texture("popup1.png");
-    private static final ResourceLocation POPUP_2 = texture("popup2.png");
-    private static final ResourceLocation WIN = texture("win.png");
-    private static final ResourceLocation INFECTED_GLITCH = texture("glitch.png");
+    private static final Identifier RANSOM = texture("ransom.png");
+    private static final Identifier BLOCK = texture("block.png");
+    private static final Identifier JUMPSCARE_1 = texture("jumpscare1.png");
+    private static final Identifier JUMPSCARE_2 = texture("jumpscare2.png");
+    private static final Identifier POPUP_1 = texture("popup1.png");
+    private static final Identifier POPUP_2 = texture("popup2.png");
+    private static final Identifier WIN = texture("win.png");
+    private static final Identifier INFECTED_GLITCH = texture("glitch.png");
     private static final RenderType INFECTED_GLITCH_LAYER = RansomRenderTypes.infectedGlitch(INFECTED_GLITCH);
-    private static final ResourceLocation NUGGET = ResourceLocation.withDefaultNamespace("textures/item/gold_nugget.png");
-    private static final ResourceLocation[] WEIRD_TEXTURES = {
-            ResourceLocation.withDefaultNamespace("textures/block/command_block_front.png"),
-            ResourceLocation.withDefaultNamespace("textures/block/crying_obsidian.png"),
-            ResourceLocation.withDefaultNamespace("textures/block/nether_portal.png"),
-            ResourceLocation.withDefaultNamespace("textures/entity/end_portal.png")
+    private static final Identifier NUGGET = Identifier.withDefaultNamespace("textures/item/gold_nugget.png");
+    private static final Identifier[] WEIRD_TEXTURES = {
+            Identifier.withDefaultNamespace("textures/block/command_block_front.png"),
+            Identifier.withDefaultNamespace("textures/block/crying_obsidian.png"),
+            Identifier.withDefaultNamespace("textures/block/nether_portal.png"),
+            Identifier.withDefaultNamespace("textures/entity/end_portal.png")
     };
 
     private static final int WARNING_TICKS = 48;
@@ -189,7 +190,7 @@ public final class RansomEncounter {
             pendingFailureDeleteHotbar = failureScare.deleteHotbar();
             phase = Phase.FAILED;
             phaseTicks = 0;
-            minecraft.setScreen(null);
+            minecraft.setScreenAndShow(null);
             stopJumpscare(minecraft);
             jumpscareSound = SimpleSoundInstance.forUI(RansomInMinecraft.JUMPSCARE2.get(), 1.0F, 1.0F);
             minecraft.getSoundManager().play(jumpscareSound);
@@ -228,7 +229,7 @@ public final class RansomEncounter {
             respawnRecoveryScare = true;
             phase = Phase.JUMPSCARE;
             phaseTicks = 0;
-            minecraft.setScreen(null);
+            minecraft.setScreenAndShow(null);
             setServerRansomState(minecraft, true, false, 0);
             jumpscareSound = SimpleSoundInstance.forUI(RansomInMinecraft.JUMPSCARE.get(), 1.0F, 1.0F);
             minecraft.getSoundManager().play(jumpscareSound);
@@ -303,7 +304,7 @@ public final class RansomEncounter {
     private static void tickRansom(Minecraft minecraft) {
         // Index 9 is deliberately outside the nine real hotbar slots. Inventory#getSelected
         // therefore exposes an empty main hand without moving or replacing any item stack.
-        minecraft.player.getInventory().selected = Inventory.getSelectionSize();
+        InventorySelectionAccessor.selectHidden(minecraft.player.getInventory());
         PacketDistributor.sendToServer(new RansomProgressPayload(coins, targetCoins, phaseTicks));
 
         int infectionRadius = infectionRadius();
@@ -312,7 +313,7 @@ public final class RansomEncounter {
             escapeResumePhaseTicks = phaseTicks;
             phase = Phase.ESCAPE_SCARE;
             phaseTicks = 0;
-            minecraft.setScreen(null);
+            minecraft.setScreenAndShow(null);
             stopJumpscare(minecraft);
             jumpscareSound = SimpleSoundInstance.forUI(RansomInMinecraft.JUMPSCARE.get(), 1.0F, 1.0F);
             minecraft.getSoundManager().play(jumpscareSound);
@@ -324,7 +325,7 @@ public final class RansomEncounter {
             pendingFailureDeleteHotbar = ClientConfig.DELETE_HOTBAR_ON_FAILURE.get();
             phase = Phase.FAILED;
             phaseTicks = 0;
-            minecraft.setScreen(null);
+            minecraft.setScreenAndShow(null);
             PacketDistributor.sendToServer(new RansomFailureArmedPayload(
                     coins, ClientConfig.DELETE_HOTBAR_ON_FAILURE.get()));
             jumpscareSound = SimpleSoundInstance.forUI(RansomInMinecraft.JUMPSCARE2.get(), 1.0F, 1.0F);
@@ -410,8 +411,8 @@ public final class RansomEncounter {
             stopSoundtrack(minecraft);
             restoreMinecraftMusic(minecraft);
             setServerRansomState(minecraft, false, false, 0);
-            if (!Inventory.isHotbarSlot(minecraft.player.getInventory().selected)) {
-                minecraft.player.getInventory().selected = lockedSlot;
+            if (!Inventory.isHotbarSlot(minecraft.player.getInventory().getSelectedSlot())) {
+                minecraft.player.getInventory().setSelectedSlot(lockedSlot);
             }
             successStartX = mainWindowX;
             successStartY = mainWindowY;
@@ -431,7 +432,7 @@ public final class RansomEncounter {
         INFECTED.clear();
         infectionCenter = null;
         infectionPreflightDone = false;
-        lockedSlot = minecraft.player.getInventory().selected;
+        lockedSlot = minecraft.player.getInventory().getSelectedSlot();
         warningStartX = 0.08F + RANDOM.nextFloat() * 0.84F;
         warningStartY = 0.08F + RANDOM.nextFloat() * 0.70F;
         lastMouseX = minecraft.mouseHandler.xpos();
@@ -443,7 +444,7 @@ public final class RansomEncounter {
     private static void startJumpscare(Minecraft minecraft) {
         phase = Phase.JUMPSCARE;
         phaseTicks = 0;
-        minecraft.setScreen(null);
+        minecraft.setScreenAndShow(null);
         PacketDistributor.sendToServer(new RansomProgressPayload(coins, targetCoins, 0));
         stopJumpscare(minecraft);
         jumpscareSound = SimpleSoundInstance.forUI(RansomInMinecraft.JUMPSCARE.get(), 1.0F, 1.0F);
@@ -507,8 +508,8 @@ public final class RansomEncounter {
         Phase previousPhase = phase;
         Minecraft minecraft = Minecraft.getInstance();
         setServerRansomState(minecraft, false, false, 0);
-        if (minecraft.player != null && !Inventory.isHotbarSlot(minecraft.player.getInventory().selected)) {
-            minecraft.player.getInventory().selected = lockedSlot;
+        if (minecraft.player != null && !Inventory.isHotbarSlot(minecraft.player.getInventory().getSelectedSlot())) {
+            minecraft.player.getInventory().setSelectedSlot(lockedSlot);
         }
         phase = Phase.IDLE;
         phaseTicks = 0;
@@ -588,7 +589,7 @@ public final class RansomEncounter {
 
     @SubscribeEvent
     public static void renderInventoryHotbarLock(ScreenEvent.Render.Post event) {
-        GuiGraphics graphics = event.getGuiGraphics();
+        GuiGraphicsExtractor graphics = event.getGuiGraphicsExtractor();
         if (handsLocked() && event.getScreen() instanceof InventoryScreen) {
             int left = (event.getScreen().width - 176) / 2;
             int top = (event.getScreen().height - 166) / 2;
@@ -668,10 +669,10 @@ public final class RansomEncounter {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void render(RenderGuiEvent.Post event) {
         if (Minecraft.getInstance().screen != null) return;
-        renderEncounterOverlay(event.getGuiGraphics());
+        renderEncounterOverlay(event.getGuiGraphicsExtractor());
     }
 
-    private static void renderEncounterOverlay(GuiGraphics graphics) {
+    private static void renderEncounterOverlay(GuiGraphicsExtractor graphics) {
         if (phase == Phase.IDLE) return;
         Minecraft minecraft = Minecraft.getInstance();
         int width = graphics.guiWidth();
@@ -693,9 +694,9 @@ public final class RansomEncounter {
         graphics.pose().popPose();
     }
 
-    private static void renderWarning(GuiGraphics graphics, int width, int height) {
+    private static void renderWarning(GuiGraphicsExtractor graphics, int width, int height) {
         int size = Math.min(width, height) * 2 / 5;
-        ResourceLocation image = phaseTicks < WARNING_STOP_TICK ? RANSOM : BLOCK;
+        Identifier image = phaseTicks < WARNING_STOP_TICK ? RANSOM : BLOCK;
         int x;
         int y;
         if (phaseTicks < WARNING_TELEPORT_TICK) {
@@ -708,7 +709,7 @@ public final class RansomEncounter {
         blitScaled(graphics, image, x, y, size, size, 200, 200);
     }
 
-    private static void renderEmptyAreaExit(GuiGraphics graphics, int width, int height) {
+    private static void renderEmptyAreaExit(GuiGraphicsExtractor graphics, int width, int height) {
         int size = Math.min(width, height) * 2 / 5;
         int waitTicks = 20;
         float progress = Mth.clamp((phaseTicks - waitTicks) / (float) (EMPTY_AREA_EXIT_TICKS - waitTicks), 0.0F, 1.0F);
@@ -719,14 +720,14 @@ public final class RansomEncounter {
         blitScaled(graphics, RANSOM, x, y, size, size, 200, 200);
     }
 
-    private static void renderJumpscare(GuiGraphics graphics, int width, int height) {
+    private static void renderJumpscare(GuiGraphicsExtractor graphics, int width, int height) {
         renderJumpscare(graphics, width, height, false);
     }
 
-    private static void renderJumpscare(GuiGraphics graphics, int width, int height, boolean forceLarge) {
+    private static void renderJumpscare(GuiGraphicsExtractor graphics, int width, int height, boolean forceLarge) {
         renderNoise(graphics, width, height, true);
         boolean firstFrame = !forceLarge && phaseTicks < 6;
-        ResourceLocation texture = firstFrame ? JUMPSCARE_1 : JUMPSCARE_2;
+        Identifier texture = firstFrame ? JUMPSCARE_1 : JUMPSCARE_2;
         int textureWidth = texture == JUMPSCARE_1 ? 200 : 564;
         int textureHeight = texture == JUMPSCARE_1 ? 200 : 647;
         int availableHeight = height - 26;
@@ -741,7 +742,7 @@ public final class RansomEncounter {
         renderLockedHotbar(graphics, width, height);
     }
 
-    private static void renderInfectionSequence(GuiGraphics graphics, Font font, int width, int height) {
+    private static void renderInfectionSequence(GuiGraphicsExtractor graphics, Font font, int width, int height) {
         if (phaseTicks < jumpscareEndTick()) {
             renderJumpscare(graphics, width, height);
         } else if (phaseTicks >= downloadStartTick() && phaseTicks < downloadEndTick()) {
@@ -749,7 +750,7 @@ public final class RansomEncounter {
         }
     }
 
-    private static void renderDownload(GuiGraphics graphics, Font font, int width, int height) {
+    private static void renderDownload(GuiGraphicsExtractor graphics, Font font, int width, int height) {
         renderNoise(graphics, width, height, true);
         int playHeight = height - 24;
         int panelWidth = Math.min(280, width - 24);
@@ -788,7 +789,7 @@ public final class RansomEncounter {
         renderLockedHotbar(graphics, width, height);
     }
 
-    private static void renderRansom(GuiGraphics graphics, Font font, int width, int height) {
+    private static void renderRansom(GuiGraphicsExtractor graphics, Font font, int width, int height) {
         float zoneIntensity = zoneEdgeIntensity(Minecraft.getInstance());
         if (phaseTicks < RANSOM_INTRO_TICKS) {
             int color = phaseTicks < 4 || phaseTicks >= 8 ? 0xFFF02020 : 0xFFFFFFFF;
@@ -850,11 +851,11 @@ public final class RansomEncounter {
         graphics.fill(x + 7, bottomY, split, bottomEdge, 0xFFFFD83D);
         graphics.fill(x + 8, bottomY + 1, split - 1, bottomEdge - 1, 0xFF090909);
         blitScaled(graphics, NUGGET, x + 13, bottomY + 5, 12, 12, 16, 16);
-        graphics.drawString(font, Integer.toString(remaining), x + 30, bottomY + 8, 0xFFFFD83D, true);
+        graphics.text(font, Integer.toString(remaining), x + 30, bottomY + 8, 0xFFFFD83D, true);
         graphics.fill(split + 4, bottomY, x + windowWidth - 7, bottomEdge, 0xFFFFFFFF);
         graphics.fill(split + 5, bottomY + 1, x + windowWidth - 8, bottomEdge - 1, 0xFFB31318);
         int seconds = Math.max(0, (RANSOM_TICKS - phaseTicks + 19) / 20);
-        graphics.drawString(font, String.format("TIME %02d:%02d", seconds / 60, seconds % 60),
+        graphics.text(font, String.format("TIME %02d:%02d", seconds / 60, seconds % 60),
                 split + 9, bottomY + 8, 0xFF000000, true);
 
         renderLockedHotbar(graphics, width, height);
@@ -862,7 +863,7 @@ public final class RansomEncounter {
         graphics.pose().popPose();
     }
 
-    private static void renderPopups(GuiGraphics graphics, int width, int height) {
+    private static void renderPopups(GuiGraphicsExtractor graphics, int width, int height) {
         for (int layer = 0; layer < POPUPS.size(); layer++) {
             Popup popup = POPUPS.get(layer);
             int fullWidth = popup.width;
@@ -899,7 +900,7 @@ public final class RansomEncounter {
             } else if (!whiteTransition && popup.variant == 1) {
                 blitScaled(graphics, POPUP_2, x + 3, y + 12, popupWidth - 6, popupHeight - 15, 200, 165);
             } else if (!whiteTransition && popup.variant >= 3) {
-                ResourceLocation texture = WEIRD_TEXTURES[popup.variant % WEIRD_TEXTURES.length];
+                Identifier texture = WEIRD_TEXTURES[popup.variant % WEIRD_TEXTURES.length];
                 int size = Math.min(popupWidth - 8, popupHeight - 17);
                 if (size > 0) {
                     blitScaled(graphics, texture, x + (popupWidth - size) / 2, y + 14, size, size, 16, 16);
@@ -911,7 +912,7 @@ public final class RansomEncounter {
         }
     }
 
-    private static void renderLockedHotbar(GuiGraphics graphics, int width, int height) {
+    private static void renderLockedHotbar(GuiGraphicsExtractor graphics, int width, int height) {
         if (Minecraft.getInstance().options.hideGui) return;
         int left = width / 2 - 91;
         int top = height - 22;
@@ -929,11 +930,11 @@ public final class RansomEncounter {
         graphics.pose().popPose();
     }
 
-    private static void renderNoise(GuiGraphics graphics, int width, int height, boolean fullScreen) {
+    private static void renderNoise(GuiGraphicsExtractor graphics, int width, int height, boolean fullScreen) {
         renderNoise(graphics, width, height, fullScreen, 0.0F);
     }
 
-    private static void renderNoise(GuiGraphics graphics, int width, int height, boolean fullScreen, float intensity) {
+    private static void renderNoise(GuiGraphicsExtractor graphics, int width, int height, boolean fullScreen, float intensity) {
         int playHeight = height;
         if (fullScreen) {
             graphics.fill(0, 0, width, playHeight, 0xD06C0000);
@@ -982,7 +983,7 @@ public final class RansomEncounter {
                 / Math.max(1.0D, radius - effectStart)), 0.0F, 1.0F);
     }
 
-    private static void renderZoneBoundaryWarning(GuiGraphics graphics, Font font, int width, int height, float intensity) {
+    private static void renderZoneBoundaryWarning(GuiGraphicsExtractor graphics, Font font, int width, int height, float intensity) {
         if (intensity < 0.01F || infectionCenter == null) return;
         Minecraft minecraft = Minecraft.getInstance();
         double distance = Math.sqrt(minecraft.player.position().distanceToSqr(Vec3.atCenterOf(infectionCenter)));
@@ -1002,7 +1003,7 @@ public final class RansomEncounter {
         int x = (width - boxWidth) / 2;
         graphics.fill(x, 4, x + boxWidth, 18, 0xD0000000);
         graphics.fill(x, 4, x + boxWidth, 5, color);
-        graphics.drawString(font, warning, x + 6, 7,
+        graphics.text(font, warning, x + 6, 7,
                 phaseTicks / 4 % 2 == 0 ? 0xFFFFFFFF : 0xFFFF3030, true);
     }
 
@@ -1014,7 +1015,7 @@ public final class RansomEncounter {
         POPUPS.add(new Popup(phaseTicks, lifetime, RANDOM.nextFloat(), RANDOM.nextFloat(), width, height, variant));
     }
 
-    private static void window(GuiGraphics graphics, int x, int y, int width, int height, String title) {
+    private static void window(GuiGraphicsExtractor graphics, int x, int y, int width, int height, String title) {
         graphics.fill(x, y, x + width, y + height, 0xFF34343B);
         graphics.fill(x + 2, y + 2, x + width - 2, y + 12, 0xFF686873);
         graphics.fill(x + 3, y + 3, x + width - 3, y + 11, 0xFF3B3B43);
@@ -1036,18 +1037,18 @@ public final class RansomEncounter {
         };
     }
 
-    private static void drawWrapped(GuiGraphics graphics, Font font, String text, int x, int y, int maxWidth) {
+    private static void drawWrapped(GuiGraphicsExtractor graphics, Font font, String text, int x, int y, int maxWidth) {
         List<net.minecraft.util.FormattedCharSequence> lines = font.split(Component.literal(text), maxWidth);
         for (int i = 0; i < Math.min(3, lines.size()); i++) {
-            graphics.drawString(font, lines.get(i), x, y + i * 10, 0xFFFFFFFF, false);
+            graphics.text(font, lines.get(i), x, y + i * 10, 0xFFFFFFFF, false);
         }
     }
 
-    private static void drawCentered(GuiGraphics graphics, Font font, Component text, int x, int y, int color, float scale) {
+    private static void drawCentered(GuiGraphicsExtractor graphics, Font font, Component text, int x, int y, int color, float scale) {
         graphics.pose().pushPose();
         graphics.pose().translate(x, y, 0);
         graphics.pose().scale(scale, scale, 1);
-        graphics.drawString(font, text, -font.width(text) / 2, -font.lineHeight / 2, color, true);
+        graphics.text(font, text, -font.width(text) / 2, -font.lineHeight / 2, color, true);
         graphics.pose().popPose();
     }
 
@@ -1065,22 +1066,22 @@ public final class RansomEncounter {
         return Math.floorMod(value, 5) - 2;
     }
 
-    private static void drawScaledString(GuiGraphics graphics, Font font, String text,
+    private static void drawScaledString(GuiGraphicsExtractor graphics, Font font, String text,
                                          int x, int y, int color, float scale, boolean shadow) {
         graphics.pose().pushPose();
         graphics.pose().translate(x, y, 0);
         graphics.pose().scale(scale, scale, 1);
-        graphics.drawString(font, text, 0, 0, color, shadow);
+        graphics.text(font, text, 0, 0, color, shadow);
         graphics.pose().popPose();
     }
 
-    private static void drawScaledStringRight(GuiGraphics graphics, Font font, String text,
+    private static void drawScaledStringRight(GuiGraphicsExtractor graphics, Font font, String text,
                                               int right, int y, int color, float scale, boolean shadow) {
         int x = right - Math.round(font.width(text) * scale);
         drawScaledString(graphics, font, text, x, y, color, scale, shadow);
     }
 
-    private static void drawWrappedScaled(GuiGraphics graphics, Font font, String text,
+    private static void drawWrappedScaled(GuiGraphicsExtractor graphics, Font font, String text,
                                           int x, int y, int maxWidth, float scale) {
         int unscaledWidth = Math.max(1, (int) (maxWidth / scale));
         List<net.minecraft.util.FormattedCharSequence> lines = font.split(Component.literal(text), unscaledWidth);
@@ -1089,12 +1090,12 @@ public final class RansomEncounter {
             graphics.pose().pushPose();
             graphics.pose().translate(x, y + i * lineStep, 0);
             graphics.pose().scale(scale, scale, 1);
-            graphics.drawString(font, lines.get(i), 0, 0, 0xFFFFFFFF, false);
+            graphics.text(font, lines.get(i), 0, 0, 0xFFFFFFFF, false);
             graphics.pose().popPose();
         }
     }
 
-    private static void renderThanksWindow(GuiGraphics graphics, int width, int height) {
+    private static void renderThanksWindow(GuiGraphicsExtractor graphics, int width, int height) {
         int windowWidth = Math.min(140, width - 24);
         int windowHeight = 104;
         float movement = Math.min(1.0F, phaseTicks / 12.0F);
@@ -1120,7 +1121,7 @@ public final class RansomEncounter {
         }
     }
 
-    private static void blitScaled(GuiGraphics graphics, ResourceLocation texture, int x, int y,
+    private static void blitScaled(GuiGraphicsExtractor graphics, Identifier texture, int x, int y,
                                    int width, int height, int textureWidth, int textureHeight) {
         graphics.blit(texture, x, y, width, height, 0, 0, textureWidth, textureHeight, textureWidth, textureHeight);
     }
@@ -1226,8 +1227,8 @@ public final class RansomEncounter {
         return phase == Phase.RANSOM || phase == Phase.ESCAPE_SCARE;
     }
 
-    private static ResourceLocation texture(String file) {
-        return ResourceLocation.fromNamespaceAndPath(RansomInMinecraft.MODID, "textures/" + file);
+    private static Identifier texture(String file) {
+        return Identifier.fromNamespaceAndPath(RansomInMinecraft.MODID, "textures/" + file);
     }
 
     private record InfectedBlock(BlockPos pos, int value) {

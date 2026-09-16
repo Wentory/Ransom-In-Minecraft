@@ -3,7 +3,7 @@ package com.wentory.ransom_in_minecraft;
 import com.wentory.ransom_in_minecraft.network.RansomServerState;
 import com.wentory.ransom_in_minecraft.client.RansomConfigScreen;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -30,14 +30,14 @@ public class RansomInMinecraft {
         SOUNDS.register(modBus);
         modBus.addListener(RansomServerState::registerPayloads);
         container.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
-        if (FMLEnvironment.dist == Dist.CLIENT) {
+        if (FMLEnvironment.getDist() == Dist.CLIENT) {
             container.registerExtensionPoint(IConfigScreenFactory.class,
                     (mod, parent) -> new RansomConfigScreen(parent));
         }
     }
 
     private static DeferredHolder<SoundEvent, SoundEvent> sound(String name) {
-        ResourceLocation id = ResourceLocation.fromNamespaceAndPath(MODID, name);
+        Identifier id = Identifier.fromNamespaceAndPath(MODID, name);
         return SOUNDS.register(name, () -> SoundEvent.createVariableRangeEvent(id));
     }
 }

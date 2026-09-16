@@ -5,11 +5,11 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public record RansomFailureScarePayload(int coins, boolean deleteHotbar) implements CustomPacketPayload {
     public static final Type<RansomFailureScarePayload> TYPE = new Type<>(
-            ResourceLocation.fromNamespaceAndPath(RansomInMinecraft.MODID, "ransom_failure_scare"));
+            Identifier.fromNamespaceAndPath(RansomInMinecraft.MODID, "ransom_failure_scare"));
     public static final StreamCodec<RegistryFriendlyByteBuf, RansomFailureScarePayload> STREAM_CODEC =
             StreamCodec.composite(ByteBufCodecs.VAR_INT, RansomFailureScarePayload::coins,
                     ByteBufCodecs.BOOL, RansomFailureScarePayload::deleteHotbar,

@@ -18,6 +18,10 @@ base {
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs.addAll(['-Xmaxerrs', '1000'])
+}
+
 neoForge {
     // Specify the version of NeoForge to use.
     version = project.neo_version

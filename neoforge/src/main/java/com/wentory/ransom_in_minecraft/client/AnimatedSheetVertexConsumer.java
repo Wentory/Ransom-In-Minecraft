@@ -49,4 +49,9 @@ final class AnimatedSheetVertexConsumer implements VertexConsumer {
         delegate.setNormal(x, y, z);
         return this;
     }
+
+    @Override public VertexConsumer setLineWidth(float width) {
+        delegate.setLineWidth(width);
+        return this;
+    }
 }
