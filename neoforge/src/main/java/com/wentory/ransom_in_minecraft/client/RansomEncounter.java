@@ -99,6 +99,8 @@ public final class RansomEncounter {
     private static final int MINIMUM_INFECTIONS = 12;
     private static final int WINDOW_COLOR = 0xFFFF3A24;
     private static final RandomSource RANDOM = RandomSource.create();
+    private static final int[] COIN_VALUES = {5, 10, 15};
+    private static int nextCoinValueIndex = COIN_VALUES.length;
     private static final List<InfectedBlock> INFECTED = new ArrayList<>();
     private static final List<Popup> POPUPS = new ArrayList<>();
 
@@ -559,9 +561,22 @@ public final class RansomEncounter {
                 }
             }
             if (!exposed) continue;
-            INFECTED.add(new InfectedBlock(pos.immutable(), 5 + RANDOM.nextInt(3) * 5));
+            INFECTED.add(new InfectedBlock(pos.immutable(), nextCoinValue()));
             return;
         }
+    }
+
+    private static int nextCoinValue() {
+        if (nextCoinValueIndex == COIN_VALUES.length) {
+            for (int i = COIN_VALUES.length - 1; i > 0; i--) {
+                int swap = RANDOM.nextInt(i + 1);
+                int value = COIN_VALUES[i];
+                COIN_VALUES[i] = COIN_VALUES[swap];
+                COIN_VALUES[swap] = value;
+            }
+            nextCoinValueIndex = 0;
+        }
+        return COIN_VALUES[nextCoinValueIndex++];
     }
 
     private static boolean isInfected(BlockPos pos) {
