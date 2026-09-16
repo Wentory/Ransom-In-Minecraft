@@ -1,7 +1,7 @@
 package com.wentory.ransom_in_minecraft.client;
 
 import com.wentory.ransom_in_minecraft.ClientConfig;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -43,7 +43,6 @@ public final class RansomConfigScreen extends Screen {
     private EditBox numberField(int x, int y, int value) {
         EditBox field = addRenderableWidget(new EditBox(font, x, y, 80, 18, Component.empty()));
         field.setValue(Integer.toString(value));
-        field.setFilter(text -> text.isEmpty() || text.chars().allMatch(Character::isDigit));
         return field;
     }
 
@@ -86,7 +85,7 @@ public final class RansomConfigScreen extends Screen {
         ClientConfig.NATURAL_SPAWN_MAX_SECONDS.set(spawnMax);
         ClientConfig.SPEC.save();
         RansomEncounter.refreshNaturalSpawnTimer();
-        minecraft.setScreen(parent);
+        minecraft.setScreenAndShow(parent);
     }
 
     private static int parse(EditBox field, int fallback, int minimum, int maximum) {
@@ -98,15 +97,15 @@ public final class RansomConfigScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics, mouseX, mouseY, partialTick);
-        super.render(graphics, mouseX, mouseY, partialTick);
-        graphics.drawCenteredString(font, title, width / 2, 14, 0xFFFFFFFF);
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        extractBackground(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        graphics.centeredText(font, title, width / 2, 14, 0xFFFFFFFF);
         int labelX = width / 2 - 128;
-        graphics.drawString(font, "Infection below player", labelX, 45, 0xFFFFFFFF, false);
-        graphics.drawString(font, "Infection above player", labelX, 69, 0xFFFFFFFF, false);
-        graphics.drawString(font, "Game radius (blocks)", labelX, 93, 0xFFFFFFFF, false);
-        graphics.drawString(font, "Spawn interval from (sec)", labelX, 117, 0xFFFFFFFF, false);
-        graphics.drawString(font, "Spawn interval to (sec)", labelX, 141, 0xFFFFFFFF, false);
+        graphics.text(font, "Infection below player", labelX, 45, 0xFFFFFFFF, false);
+        graphics.text(font, "Infection above player", labelX, 69, 0xFFFFFFFF, false);
+        graphics.text(font, "Game radius (blocks)", labelX, 93, 0xFFFFFFFF, false);
+        graphics.text(font, "Spawn interval from (sec)", labelX, 117, 0xFFFFFFFF, false);
+        graphics.text(font, "Spawn interval to (sec)", labelX, 141, 0xFFFFFFFF, false);
     }
 }
