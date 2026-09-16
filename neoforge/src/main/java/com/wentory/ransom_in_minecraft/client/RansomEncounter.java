@@ -376,7 +376,7 @@ public final class RansomEncounter {
         }
         extractionTicks++;
         minecraft.gui.hud.setOverlayMessage(Component.translatable("ransom.hold",
-                Math.min(100, extractionTicks * 100 / EXTRACTION_TICKS)), true);
+                Math.min(100, extractionTicks * 100 / EXTRACTION_TICKS)), false);
         if (extractionTicks < EXTRACTION_TICKS) return;
 
         collectCoinsAt(minecraft, target);
@@ -406,7 +406,7 @@ public final class RansomEncounter {
             InfectedBlock infected = iterator.next();
             if (!infected.pos.equals(pos)) continue;
             coins += infected.value;
-            minecraft.gui.hud.setOverlayMessage(Component.translatable("ransom.found", infected.value), true);
+            minecraft.gui.hud.setOverlayMessage(Component.translatable("ransom.found", infected.value), false);
             play(minecraft, SoundEvents.EXPERIENCE_ORB_PICKUP, 0.45F, 1.65F);
             iterator.remove();
             break;
@@ -1154,7 +1154,7 @@ public final class RansomEncounter {
 
     private static void blitScaled(GuiGraphicsExtractor graphics, Identifier texture, int x, int y,
                                    int width, int height, int textureWidth, int textureHeight) {
-        graphics.blit(texture, x, y, width, height, 0, 0, 1, 1);
+        graphics.blit(texture, x, y, x + width, y + height, 0, 0, 1, 1);
     }
 
     private static void play(Minecraft minecraft, net.minecraft.sounds.SoundEvent sound, float volume, float pitch) {
