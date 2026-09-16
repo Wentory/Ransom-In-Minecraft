@@ -9,8 +9,10 @@
   "environment": "*",
   "icon": "ransom_in_minecraft.png",
   "entrypoints": {
-    "main": ["com.wentory.ransom_in_minecraft.RansomFabric"]
+    "main": ["com.wentory.ransom_in_minecraft.RansomFabric"],
+    "client": ["com.wentory.ransom_in_minecraft.RansomFabricClient"]
   },
+  "mixins": ["ransom_in_minecraft.fabric.mixins.json"],
   "depends": {
     "fabricloader": ">=0.19.5",
     "fabric-api": "*",
