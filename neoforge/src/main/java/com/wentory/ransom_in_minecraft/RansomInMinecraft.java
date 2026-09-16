@@ -2,6 +2,7 @@ package com.wentory.ransom_in_minecraft;
 
 import com.wentory.ransom_in_minecraft.network.RansomServerState;
 import com.wentory.ransom_in_minecraft.client.RansomConfigScreen;
+import com.wentory.ransom_in_minecraft.client.InfectedPlayerVisuals;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
@@ -31,6 +32,7 @@ public class RansomInMinecraft {
         modBus.addListener(RansomServerState::registerPayloads);
         container.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
+            modBus.addListener(InfectedPlayerVisuals::addPlayerLayers);
             container.registerExtensionPoint(IConfigScreenFactory.class,
                     (mod, parent) -> new RansomConfigScreen(parent));
         }

@@ -25,4 +25,6 @@ run-*/
 
 # Local porting diagnostics
 compile-*.log
+build-*.log
+run-*.log
 

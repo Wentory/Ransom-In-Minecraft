@@ -3,7 +3,7 @@ package com.wentory.ransom_in_minecraft.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.wentory.ransom_in_minecraft.ClientConfig;
-import com.wentory.ransom_in_minecraft.RansomInMinecraft;
+import com.wentory.ransom_in_minecraft.RansomFabric;
 import com.wentory.ransom_in_minecraft.network.RansomStatePayload;
 import com.wentory.ransom_in_minecraft.network.RansomProgressPayload;
 import com.wentory.ransom_in_minecraft.network.ClientRansomResumeTracker;
@@ -11,6 +11,7 @@ import com.wentory.ransom_in_minecraft.network.RansomFailureArmedPayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
@@ -35,20 +36,8 @@ import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.InputEvent;
-import net.neoforged.neoforge.client.event.RenderGuiEvent;
-import net.neoforged.neoforge.client.event.RenderHandEvent;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import net.neoforged.neoforge.client.event.ScreenEvent;
-import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.client.network.ClientPacketDistributor;
-import com.wentory.ransom_in_minecraft.mixin.ItemInHandRendererInvoker;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import com.wentory.ransom_in_minecraft.mixin.InventorySelectionAccessor;
 import com.wentory.ransom_in_minecraft.mixin.SoundEngineAccessor;
 import com.wentory.ransom_in_minecraft.mixin.SoundManagerAccessor;
@@ -65,7 +54,6 @@ import java.util.Set;
  * First playable version of the Ransom encounter. The encounter is deliberately
  * client-driven while its look and timing are being play-tested.
  */
-@EventBusSubscriber(modid = RansomInMinecraft.MODID, value = Dist.CLIENT)
 public final class RansomEncounter {
     private static final Identifier RANSOM = texture("ransom.png");
     private static final Identifier BLOCK = texture("block.png");
@@ -173,8 +161,7 @@ public final class RansomEncounter {
         restoreMinecraftMusic(minecraft);
     }
 
-    @SubscribeEvent
-    public static void clientTick(ClientTickEvent.Post event) {
+    public static void clientTick() {
         Minecraft minecraft = Minecraft.getInstance();
         var serverResume = ClientRansomResumeTracker.consume();
         if (serverResume != null) {
@@ -196,7 +183,7 @@ public final class RansomEncounter {
             phaseTicks = 0;
             minecraft.setScreenAndShow(null);
             stopJumpscare(minecraft);
-            jumpscareSound = SimpleSoundInstance.forUI(RansomInMinecraft.JUMPSCARE2.get(), 1.0F, 1.0F);
+            jumpscareSound = SimpleSoundInstance.forUI(RansomFabric.JUMPSCARE2.get(), 1.0F, 1.0F);
             minecraft.getSoundManager().play(jumpscareSound);
             return;
         }
@@ -235,7 +222,7 @@ public final class RansomEncounter {
             phaseTicks = 0;
             minecraft.setScreenAndShow(null);
             setServerRansomState(minecraft, true, false, 0);
-            jumpscareSound = SimpleSoundInstance.forUI(RansomInMinecraft.JUMPSCARE.get(), 1.0F, 1.0F);
+            jumpscareSound = SimpleSoundInstance.forUI(RansomFabric.JUMPSCARE.get(), 1.0F, 1.0F);
             minecraft.getSoundManager().play(jumpscareSound);
             return;
         }
@@ -309,7 +296,7 @@ public final class RansomEncounter {
         // Index 9 is deliberately outside the nine real hotbar slots. Inventory#getSelected
         // therefore exposes an empty main hand without moving or replacing any item stack.
         ((InventorySelectionAccessor) minecraft.player.getInventory()).ransom$setSelectedSlot(Inventory.getSelectionSize());
-        ClientPacketDistributor.sendToServer(new RansomProgressPayload(coins, targetCoins, phaseTicks));
+        ClientPlayNetworking.send(new RansomProgressPayload(coins, targetCoins, phaseTicks));
 
         int infectionRadius = infectionRadius();
         if (infectionCenter != null && minecraft.player.position().distanceToSqr(Vec3.atCenterOf(infectionCenter))
@@ -319,7 +306,7 @@ public final class RansomEncounter {
             phaseTicks = 0;
             minecraft.setScreenAndShow(null);
             stopJumpscare(minecraft);
-            jumpscareSound = SimpleSoundInstance.forUI(RansomInMinecraft.JUMPSCARE.get(), 1.0F, 1.0F);
+            jumpscareSound = SimpleSoundInstance.forUI(RansomFabric.JUMPSCARE.get(), 1.0F, 1.0F);
             minecraft.getSoundManager().play(jumpscareSound);
             return;
         }
@@ -330,9 +317,9 @@ public final class RansomEncounter {
             phase = Phase.FAILED;
             phaseTicks = 0;
             minecraft.setScreenAndShow(null);
-            ClientPacketDistributor.sendToServer(new RansomFailureArmedPayload(
+            ClientPlayNetworking.send(new RansomFailureArmedPayload(
                     coins, ClientConfig.DELETE_HOTBAR_ON_FAILURE.get()));
-            jumpscareSound = SimpleSoundInstance.forUI(RansomInMinecraft.JUMPSCARE2.get(), 1.0F, 1.0F);
+            jumpscareSound = SimpleSoundInstance.forUI(RansomFabric.JUMPSCARE2.get(), 1.0F, 1.0F);
             minecraft.getSoundManager().play(jumpscareSound);
             return;
         }
@@ -422,7 +409,7 @@ public final class RansomEncounter {
             successStartY = mainWindowY;
             phase = Phase.WIN;
             phaseTicks = 0;
-            play(minecraft, RansomInMinecraft.SUCCESS.get(), 1.0F, 1.0F);
+            play(minecraft, RansomFabric.SUCCESS.get(), 1.0F, 1.0F);
         }
     }
 
@@ -441,17 +428,17 @@ public final class RansomEncounter {
         warningStartY = 0.08F + RANDOM.nextFloat() * 0.70F;
         lastMouseX = minecraft.mouseHandler.xpos();
         lastMouseY = minecraft.mouseHandler.ypos();
-        ClientPacketDistributor.sendToServer(new RansomProgressPayload(coins, targetCoins, 0));
-        play(minecraft, RansomInMinecraft.SPAWN.get(), 1.0F, 1.0F);
+        ClientPlayNetworking.send(new RansomProgressPayload(coins, targetCoins, 0));
+        play(minecraft, RansomFabric.SPAWN.get(), 1.0F, 1.0F);
     }
 
     private static void startJumpscare(Minecraft minecraft) {
         phase = Phase.JUMPSCARE;
         phaseTicks = 0;
         minecraft.setScreenAndShow(null);
-        ClientPacketDistributor.sendToServer(new RansomProgressPayload(coins, targetCoins, 0));
+        ClientPlayNetworking.send(new RansomProgressPayload(coins, targetCoins, 0));
         stopJumpscare(minecraft);
-        jumpscareSound = SimpleSoundInstance.forUI(RansomInMinecraft.JUMPSCARE.get(), 1.0F, 1.0F);
+        jumpscareSound = SimpleSoundInstance.forUI(RansomFabric.JUMPSCARE.get(), 1.0F, 1.0F);
         minecraft.getSoundManager().play(jumpscareSound);
     }
 
@@ -462,7 +449,7 @@ public final class RansomEncounter {
         infectionCenter = null;
         stopJumpscare(minecraft);
         setServerRansomState(minecraft, false, false, 0);
-        play(minecraft, RansomInMinecraft.BOWOMP.get(), 1.0F, 1.0F);
+        play(minecraft, RansomFabric.BOWOMP.get(), 1.0F, 1.0F);
     }
 
     private static void startRansom(Minecraft minecraft) {
@@ -489,13 +476,13 @@ public final class RansomEncounter {
         if (resume || INFECTED.isEmpty()) infectNearbyBlocks(minecraft);
         if (!resume || soundtrack == null) {
             soundtrack = new SimpleSoundInstance(
-                    RansomInMinecraft.SOUNDTRACK.get().location(), SoundSource.MASTER, 0.8F, 1.0F,
+                    RansomFabric.SOUNDTRACK.get().location(), SoundSource.MASTER, 0.8F, 1.0F,
                     RANDOM, false, 0, SoundInstance.Attenuation.NONE, 0, 0, 0, true);
             minecraft.getSoundManager().play(soundtrack);
             soundtrackPaused = false;
         }
         setServerRansomState(minecraft, true, false, 0);
-        ClientPacketDistributor.sendToServer(new RansomProgressPayload(coins, targetCoins, phaseTicks));
+        ClientPlayNetworking.send(new RansomProgressPayload(coins, targetCoins, phaseTicks));
     }
 
     private static void finishEscapePenalty(Minecraft minecraft) {
@@ -575,28 +562,23 @@ public final class RansomEncounter {
     }
 
 
-    @SubscribeEvent
-    public static void keyInput(InputEvent.Key event) {
-        if (phase == Phase.WARNING && event.getAction() == GLFW.GLFW_PRESS
-                && event.getKey() != GLFW.GLFW_KEY_ESCAPE) forbiddenInput = true;
+    public static void keyInput(int key, int action) {
+        if (phase == Phase.WARNING && action == GLFW.GLFW_PRESS
+                && key != GLFW.GLFW_KEY_ESCAPE) forbiddenInput = true;
     }
 
-    @SubscribeEvent
-    public static void mouseInput(InputEvent.MouseButton.Pre event) {
-        if (phase == Phase.WARNING && event.getAction() == GLFW.GLFW_PRESS) forbiddenInput = true;
+    public static void mouseInput(int action) {
+        if (phase == Phase.WARNING && action == GLFW.GLFW_PRESS) forbiddenInput = true;
     }
 
-    @SubscribeEvent
-    public static void scrollInput(InputEvent.MouseScrollingEvent event) {
-        if (handsLocked()) event.setCanceled(true);
+    public static boolean shouldBlockScroll() {
+        return handsLocked();
     }
 
-    @SubscribeEvent
-    public static void renderInventoryHotbarLock(ScreenEvent.Render.Post event) {
-        GuiGraphicsExtractor graphics = event.getGuiGraphics();
-        if (handsLocked() && event.getScreen() instanceof InventoryScreen) {
-            int left = (event.getScreen().width - 176) / 2;
-            int top = (event.getScreen().height - 166) / 2;
+    public static void renderInventoryHotbarLock(Screen screen, GuiGraphicsExtractor graphics) {
+        if (handsLocked() && screen instanceof InventoryScreen) {
+            int left = (screen.width - 176) / 2;
+            int top = (screen.height - 166) / 2;
             graphics.pose().pushMatrix();
             graphics.nextStratum();
             for (int slot = 0; slot < 9; slot++) {
@@ -614,41 +596,20 @@ public final class RansomEncounter {
         renderEncounterOverlay(graphics);
     }
 
-    @SubscribeEvent
-    public static void interaction(InputEvent.InteractionKeyMappingTriggered event) {
-        if (handsLocked() && event.isPickBlock()) {
-            event.setCanceled(true);
-        }
+    public static boolean shouldBlockPickBlock() {
+        return handsLocked();
     }
 
-    @SubscribeEvent
-    public static void useFistMiningSpeed(PlayerEvent.BreakSpeed event) {
-        if (!handsLocked()) return;
-        float heldItemSpeed = event.getEntity().getMainHandItem().getDestroySpeed(event.getState());
-        if (heldItemSpeed > 1.0F) {
-            event.setNewSpeed(event.getOriginalSpeed() / heldItemSpeed);
-        }
+    public static boolean shouldHideHeldItem() {
+        return handsLocked();
     }
 
-    @SubscribeEvent
-    public static void renderEmptyHand(RenderHandEvent event) {
-        if (!handsLocked() || event.getItemStack().isEmpty()) return;
-        event.setCanceled(true);
-        if (event.getHand() == InteractionHand.MAIN_HAND) {
-            Minecraft minecraft = Minecraft.getInstance();
-            ((ItemInHandRendererInvoker) minecraft.gameRenderer.itemInHandRenderer).ransom$renderPlayerArm(
-                    event.getPoseStack(), event.getSubmitNodeCollector(), event.getPackedLight(),
-                    event.getEquipProgress(), event.getSwingProgress(), minecraft.player.getMainArm());
-        }
-    }
-
-    @SubscribeEvent
-    public static void renderInfectedBlocks(SubmitCustomGeometryEvent event) {
+    public static void renderInfectedBlocks(LevelRenderContext context) {
         if (phase != Phase.RANSOM || INFECTED.isEmpty()) return;
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null) return;
-        PoseStack poseStack = event.getPoseStack();
-        Vec3 camera = event.getLevelRenderState().cameraRenderState.pos;
+        PoseStack poseStack = context.poseStack();
+        Vec3 camera = context.levelState().cameraRenderState.pos;
         int glitchFrame = (phaseTicks / 2) % 6;
 
         for (InfectedBlock infected : INFECTED) {
@@ -668,7 +629,7 @@ public final class RansomEncounter {
                         infected.pos.getX() - camera.x,
                         infected.pos.getY() - camera.y,
                         infected.pos.getZ() - camera.z);
-                event.getSubmitNodeCollector().submitCustomGeometry(poseStack, INFECTED_GLITCH_LAYER,
+                context.submitNodeCollector().submitCustomGeometry(poseStack, INFECTED_GLITCH_LAYER,
                         (pose, vertices) -> drawInfectedFaces(pose, vertices, faces, glitchFrame));
                 poseStack.popPose();
             }
@@ -697,10 +658,9 @@ public final class RansomEncounter {
         }
     }
 
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void render(RenderGuiEvent.Post event) {
+    public static void renderHud(GuiGraphicsExtractor graphics) {
         if (Minecraft.getInstance().gui.screen() != null) return;
-        renderEncounterOverlay(event.getGuiGraphics());
+        renderEncounterOverlay(graphics);
     }
 
     private static void renderEncounterOverlay(GuiGraphicsExtractor graphics) {
@@ -1214,7 +1174,7 @@ public final class RansomEncounter {
     private static void setServerRansomState(Minecraft minecraft, boolean active, boolean failure, int coins,
                                               int penaltyDamage, boolean deleteHotbar) {
         if (minecraft.getConnection() != null) {
-            ClientPacketDistributor.sendToServer(new RansomStatePayload(active, failure, coins, penaltyDamage, deleteHotbar));
+            ClientPlayNetworking.send(new RansomStatePayload(active, failure, coins, penaltyDamage, deleteHotbar));
         }
     }
 
@@ -1259,7 +1219,7 @@ public final class RansomEncounter {
     }
 
     private static Identifier texture(String file) {
-        return Identifier.fromNamespaceAndPath(RansomInMinecraft.MODID, "textures/" + file);
+        return Identifier.fromNamespaceAndPath(RansomFabric.MODID, "textures/" + file);
     }
 
     private record InfectedBlock(BlockPos pos, int value) {

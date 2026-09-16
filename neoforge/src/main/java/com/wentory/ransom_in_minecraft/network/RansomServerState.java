@@ -100,7 +100,7 @@ public final class RansomServerState {
     public static void keepMainHandEmpty(PlayerTickEvent.Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player)
                 || !LOCKED_PLAYERS.containsKey(player.getUUID())) return;
-        InventorySelectionAccessor.selectHidden(player.getInventory());
+        ((InventorySelectionAccessor) player.getInventory()).ransom$setSelectedSlot(Inventory.getSelectionSize());
     }
 
     @SubscribeEvent
@@ -181,8 +181,8 @@ public final class RansomServerState {
         ResourceKey<DamageType> key = ResourceKey.create(Registries.DAMAGE_TYPE,
                 Identifier.fromNamespaceAndPath(RansomInMinecraft.MODID, "ransom_debt"));
         Holder<DamageType> type = player.level().registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE)
-                .getHolder(key).orElse(player.level().registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE)
-                        .getHolderOrThrow(net.minecraft.world.damagesource.DamageTypes.GENERIC));
+                .get(key).orElse(player.level().registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE)
+                        .getOrThrow(net.minecraft.world.damagesource.DamageTypes.GENERIC));
         String messageKey = coins <= 0 ? "death.attack.ransom_debt_no_coins"
                 : java.util.concurrent.ThreadLocalRandom.current().nextBoolean()
                         ? "death.attack.ransom_debt_inattentive" : "death.attack.ransom_debt_late";
@@ -201,7 +201,7 @@ public final class RansomServerState {
         if (previous == null) {
             PacketDistributor.sendToAllPlayers(new InfectionStatusPayload(player.getUUID(), true));
         }
-        InventorySelectionAccessor.selectHidden(player.getInventory());
+        ((InventorySelectionAccessor) player.getInventory()).ransom$setSelectedSlot(Inventory.getSelectionSize());
     }
 
     private static void unlockHands(ServerPlayer player) {

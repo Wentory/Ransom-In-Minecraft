@@ -1,7 +1,7 @@
 package com.wentory.ransom_in_minecraft.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.wentory.ransom_in_minecraft.RansomInMinecraft;
+import com.wentory.ransom_in_minecraft.RansomFabric;
 import com.wentory.ransom_in_minecraft.network.ClientInfectionTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.player.PlayerModel;
@@ -13,20 +13,21 @@ import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.fabricmc.fabric.api.client.rendering.v1.LivingEntityRenderLayerRegistrationCallback;
 
 public final class InfectedPlayerVisuals {
     private static final Identifier GLITCH = Identifier.fromNamespaceAndPath(
-            RansomInMinecraft.MODID, "textures/glitch.png");
+            RansomFabric.MODID, "textures/glitch.png");
 
     private InfectedPlayerVisuals() {}
 
-    public static void addPlayerLayers(EntityRenderersEvent.AddLayers event) {
-        for (var skin : event.getSkins()) {
-            AvatarRenderer<?> renderer = event.getPlayerRenderer(skin);
-            if (renderer != null) renderer.addLayer(new InfectionLayer(renderer));
-        }
+    public static void initialize() {
+        LivingEntityRenderLayerRegistrationCallback.EVENT.register((type, renderer, helper, context) -> {
+            if (type == EntityTypes.PLAYER && renderer instanceof AvatarRenderer<?> avatar)
+                helper.register(new InfectionLayer(avatar));
+        });
     }
 
     private static final class InfectionLayer extends RenderLayer<AvatarRenderState, PlayerModel> {

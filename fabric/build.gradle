@@ -23,9 +23,10 @@ dependencies {
 
 sourceSets.main.resources.srcDir '../common/src/main/resources'
 
+def resourceVersion = mod_version
 processResources {
-    inputs.property 'version', project.version
-    filesMatching('fabric.mod.json') { expand version: project.version }
+    inputs.property 'version', resourceVersion
+    filesMatching('fabric.mod.json') { expand version: resourceVersion }
 }
 
 tasks.withType(JavaCompile).configureEach { options.release = 25 }
