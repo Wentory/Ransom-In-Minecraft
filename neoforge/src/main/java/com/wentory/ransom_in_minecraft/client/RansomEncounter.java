@@ -1169,7 +1169,7 @@ public final class RansomEncounter {
 
     private static void blitScaled(GuiGraphicsExtractor graphics, Identifier texture, int x, int y,
                                    int width, int height, int textureWidth, int textureHeight) {
-        graphics.blit(texture, x, y, x + width, y + height, 0, 0, 1, 1);
+        graphics.blit(texture, x, y, x + width, y + height, 0, 1, 0, 1);
     }
 
     private static void play(Minecraft minecraft, net.minecraft.sounds.SoundEvent sound, float volume, float pitch) {
