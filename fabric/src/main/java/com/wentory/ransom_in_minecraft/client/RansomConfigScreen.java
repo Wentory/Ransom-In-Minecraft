@@ -98,7 +98,7 @@ public final class RansomConfigScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        extractBackground(graphics, mouseX, mouseY, partialTick);
+        graphics.fill(0, 0, width, height, 0xC0101010);
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         graphics.centeredText(font, title, width / 2, 14, 0xFFFFFFFF);
         int labelX = width / 2 - 128;
