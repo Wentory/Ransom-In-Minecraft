@@ -44,13 +44,6 @@ public final class InfectedPlayerVisuals {
                     || !ClientInfectionTracker.isInfected(player.getUUID())) return;
 
             PlayerModel model = getParentModel();
-            poseStack.pushPose();
-            poseStack.scale(1.035F, 1.035F, 1.035F);
-            collector.submitModel(model, state, poseStack,
-                    RenderTypes.entityTranslucent(state.skin.body().texturePath()),
-                    packedLight, OverlayTexture.NO_OVERLAY, 0x70FF1010, null);
-            poseStack.popPose();
-
             int frame = ((int) state.ageInTicks / 2) % 6;
             collector.submitCustomGeometry(poseStack, RenderTypes.entityTranslucentEmissive(GLITCH),
                     (pose, vertices) -> {
