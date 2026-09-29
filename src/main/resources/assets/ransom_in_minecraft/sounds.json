@@ -1,12 +1,53 @@
 {
+  "creeper_trail": { "sounds": ["ransom_in_minecraft:creeper/trail"] },
+  "creeper_charge": { "sounds": [{ "name": "ransom_in_minecraft:creeper/charge", "attenuation_distance": 50 }] },
+  "creeper_explode": { "sounds": ["ransom_in_minecraft:creeper/explode"] },
+  "drowned_idle": { "sounds": ["ransom_in_minecraft:drowned/idle1", "ransom_in_minecraft:drowned/idle2", "ransom_in_minecraft:drowned/idle3", "ransom_in_minecraft:drowned/idle4", "ransom_in_minecraft:drowned/idle5"] },
+  "drowned_hurt": { "sounds": ["ransom_in_minecraft:drowned/hurt1", "ransom_in_minecraft:drowned/hurt2", "ransom_in_minecraft:drowned/hurt3"] },
+  "drowned_death": { "sounds": ["ransom_in_minecraft:drowned/death1", "ransom_in_minecraft:drowned/death2"] },
+  "drowned_idle_water": { "sounds": ["ransom_in_minecraft:drowned/water/idle1", "ransom_in_minecraft:drowned/water/idle2", "ransom_in_minecraft:drowned/water/idle3", "ransom_in_minecraft:drowned/water/idle4"] },
+  "drowned_hurt_water": { "sounds": ["ransom_in_minecraft:drowned/water/hurt1", "ransom_in_minecraft:drowned/water/hurt2", "ransom_in_minecraft:drowned/water/hurt3"] },
+  "drowned_death_water": { "sounds": ["ransom_in_minecraft:drowned/water/death1", "ransom_in_minecraft:drowned/water/death2"] },
+  "zombie_death": { "sounds": ["ransom_in_minecraft:zombie/death"] },
+  "zombie_say": { "sounds": ["ransom_in_minecraft:zombie/say1", "ransom_in_minecraft:zombie/say2", "ransom_in_minecraft:zombie/say3"] },
+  "zombie_hurt": { "sounds": ["ransom_in_minecraft:zombie/hurt1", "ransom_in_minecraft:zombie/hurt2"] },
+  "zombie_step": { "sounds": ["ransom_in_minecraft:zombie/step1", "ransom_in_minecraft:zombie/step2", "ransom_in_minecraft:zombie/step3", "ransom_in_minecraft:zombie/step4", "ransom_in_minecraft:zombie/step5"] },
+  "zombie_stop": { "sounds": ["ransom_in_minecraft:zombie/stop"] },
   "spawn": { "sounds": ["ransom_in_minecraft:spawn"] },
   "jumpscare": { "sounds": ["ransom_in_minecraft:jumpscare"] },
   "jumpscare2": { "sounds": ["ransom_in_minecraft:jumpscare2"] },
   "bowomp": { "sounds": ["ransom_in_minecraft:bowomp"] },
   "ransom_success": { "sounds": ["ransom_in_minecraft:ransom_success"] },
+  "glitch_hit": { "sounds": ["ransom_in_minecraft:glitch_hit"] },
+  "pick_coins": { "sounds": ["ransom_in_minecraft:pick_coins"] },
+  "got_coins": { "sounds": ["ransom_in_minecraft:got_coins"] },
+  "glitch": { "sounds": ["ransom_in_minecraft:glitch"] },
+  "glitch2": { "sounds": ["ransom_in_minecraft:glitch2"] },
+  "failture": { "sounds": ["ransom_in_minecraft:failture"] },
+  "stealer_success": { "sounds": ["ransom_in_minecraft:stealer_success"] },
+  "window_open": { "sounds": ["ransom_in_minecraft:window_open"] },
+  "window_close": { "sounds": ["ransom_in_minecraft:window_close"] },
+  "scanning": { "sounds": ["ransom_in_minecraft:scanning"] },
+  "laugh": { "sounds": ["ransom_in_minecraft:laugh"] },
+  "terminal_click": { "sounds": [
+    "ransom_in_minecraft:click1",
+    "ransom_in_minecraft:click2",
+    "ransom_in_minecraft:click3",
+    "ransom_in_minecraft:click4"
+  ] },
   "soundtrack": {
     "sounds": [
       { "name": "ransom_in_minecraft:soundtrack", "stream": true }
+    ]
+  },
+  "soundtrack2": {
+    "sounds": [
+      { "name": "ransom_in_minecraft:soundtrack2", "stream": true }
+    ]
+  },
+  "spam_encounter": {
+    "sounds": [
+      { "name": "ransom_in_minecraft:spam_encounter", "stream": true }
     ]
   }
 }

@@ -15,7 +15,7 @@ public final class ClientConfig {
             .comment("Seconds after movement when the virus download bar disappears.")
             .defineInRange("timing.downloadEndsAtSeconds", 2.0, 0.05, 30.0);
     public static final ModConfigSpec.BooleanValue DELETE_HOTBAR_ON_FAILURE = BUILDER
-            .comment("Delete all nine hotbar stacks after the final failure jumpscare.")
+            .comment("Delete the hotbar and every additionally encrypted inventory stack after the final failure jumpscare.")
             .define("punishment.deleteHotbarOnFailure", true);
     public static final ModConfigSpec.IntValue INFECTION_VERTICAL_BELOW = BUILDER
             .comment("How many blocks below the player infected blocks may spawn.")
@@ -32,6 +32,12 @@ public final class ClientConfig {
     public static final ModConfigSpec.IntValue NATURAL_SPAWN_MAX_SECONDS = BUILDER
             .comment("Maximum delay between natural Ransom encounters, in seconds. Values below the minimum are treated as the minimum.")
             .defineInRange("spawn.maximumSeconds", 360, 1, 86400);
+    public static final ModConfigSpec.BooleanValue BIOME_WHITELIST_ENABLED = BUILDER
+            .comment("Only allow natural Ransom encounters in the biome IDs listed in biomeWhitelist.")
+            .define("spawn.biomeWhitelistEnabled", false);
+    public static final ModConfigSpec.ConfigValue<String> BIOME_WHITELIST = BUILDER
+            .comment("Comma-separated biome IDs where Ransom may naturally appear, for example: minecraft:plains, minecraft:forest")
+            .define("spawn.biomeWhitelist", "");
     public static final ModConfigSpec SPEC = BUILDER.build();
 
     private ClientConfig() {

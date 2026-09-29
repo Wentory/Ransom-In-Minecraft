@@ -1,20 +1,44 @@
 package com.wentory.ransom_in_minecraft.client;
 
 import com.wentory.ransom_in_minecraft.ClientConfig;
+import com.wentory.ransom_in_minecraft.StealerConfig;
+import com.wentory.ransom_in_minecraft.network.StealerSettingsPayload;
+import com.wentory.ransom_in_minecraft.network.WormSettingsPayload;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.neoforged.neoforge.network.PacketDistributor;
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 public final class RansomConfigScreen extends Screen {
     private final Screen parent;
     private Button deletionButton;
+    private Button biomeWhitelistButton;
+    private Button stealerButton;
+    private boolean stealerEnabled;
+    private boolean canEditStealer;
     private EditBox belowField;
     private EditBox aboveField;
     private EditBox radiusField;
     private EditBox spawnMinField;
     private EditBox spawnMaxField;
+    private EditBox biomeWhitelistField;
+    private EditBox stealerChanceField;
+    private EditBox wormHealField;
+    private EditBox zombieChanceField;
+    private EditBox drownedChanceField;
+    private EditBox creeperChanceField;
+    private Button wormButton;
+    private boolean wormEnabled;
+    private Button resetButton;
+    private Button doneButton;
+    private int scroll;
+    private final Map<AbstractWidget, Integer> rows = new LinkedHashMap<>();
 
     public RansomConfigScreen(Screen parent) {
         super(Component.literal("Ransom In Minecraft"));
@@ -23,21 +47,91 @@ public final class RansomConfigScreen extends Screen {
 
     @Override
     protected void init() {
+        canEditStealer = minecraft.player == null
+                || minecraft.getSingleplayerServer() != null || minecraft.player.hasPermissions(2);
+        stealerEnabled = serverValue(StealerConfig.ENABLED);
+        wormEnabled = serverValue(StealerConfig.WORM_ENABLED);
+        rows.clear();
         int fieldX = width / 2 + 42;
-        belowField = numberField(fieldX, 40, ClientConfig.INFECTION_VERTICAL_BELOW.get());
-        aboveField = numberField(fieldX, 64, ClientConfig.INFECTION_VERTICAL_ABOVE.get());
-        radiusField = numberField(fieldX, 88, ClientConfig.INFECTION_RADIUS.get());
-        spawnMinField = numberField(fieldX, 112, ClientConfig.NATURAL_SPAWN_MIN_SECONDS.get());
-        spawnMaxField = numberField(fieldX, 136, ClientConfig.NATURAL_SPAWN_MAX_SECONDS.get());
+        belowField = numberField(fieldX, 24, ClientConfig.INFECTION_VERTICAL_BELOW.get());
+        aboveField = numberField(fieldX, 42, ClientConfig.INFECTION_VERTICAL_ABOVE.get());
+        radiusField = numberField(fieldX, 60, ClientConfig.INFECTION_RADIUS.get());
+        spawnMinField = numberField(fieldX, 78, ClientConfig.NATURAL_SPAWN_MIN_SECONDS.get());
+        spawnMaxField = numberField(fieldX, 96, ClientConfig.NATURAL_SPAWN_MAX_SECONDS.get());
+
+        biomeWhitelistField = addRenderableWidget(new EditBox(font, width / 2 - 128, 151, 256, 18,
+                Component.literal("Biome whitelist")) {
+            @Override
+            public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+                super.renderWidget(graphics, mouseX, mouseY, partialTick);
+                if (getValue().isEmpty() && !isFocused()) {
+                    graphics.drawString(font,
+                            font.plainSubstrByWidth("minecraft:plains, minecraft:forest", getInnerWidth()),
+                            getX() + 4, getY() + (getHeight() - 8) / 2, 0x80666666, false);
+                }
+            }
+        });
+        biomeWhitelistField.setValue(ClientConfig.BIOME_WHITELIST.get());
 
         deletionButton = addRenderableWidget(Button.builder(deletionLabel(), button -> {
             ClientConfig.DELETE_HOTBAR_ON_FAILURE.set(!ClientConfig.DELETE_HOTBAR_ON_FAILURE.get());
             button.setMessage(deletionLabel());
-        }).bounds(width / 2 - 110, 164, 220, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Reset to Defaults"), button -> resetDefaults())
-                .bounds(width / 2 - 110, 196, 106, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Done"), button -> onClose())
-                .bounds(width / 2 + 4, 196, 106, 20).build());
+        }).bounds(width / 2 - 128, 117, 124, 18).build());
+        biomeWhitelistButton = addRenderableWidget(Button.builder(biomeWhitelistLabel(), button -> {
+            ClientConfig.BIOME_WHITELIST_ENABLED.set(!ClientConfig.BIOME_WHITELIST_ENABLED.get());
+            button.setMessage(biomeWhitelistLabel());
+        }).bounds(width / 2 + 4, 117, 124, 18).build());
+        stealerButton = addRenderableWidget(Button.builder(stealerLabel(), button -> {
+            stealerEnabled = !stealerEnabled;
+            button.setMessage(stealerLabel());
+        }).bounds(width / 2 - 128, 173, 256, 18).build());
+        stealerButton.active = canEditStealer;
+        stealerChanceField = numberField(fieldX, 194, serverValue(StealerConfig.INFECTION_CHANCE_PERCENT));
+        stealerChanceField.setEditable(canEditStealer);
+        wormButton = addRenderableWidget(Button.builder(wormLabel(), button -> {
+            wormEnabled = !wormEnabled;
+            button.setMessage(wormLabel());
+        }).bounds(width / 2 - 128, 216, 256, 18).build());
+        wormButton.active = canEditStealer;
+        wormHealField = numberField(fieldX, 238, serverValue(StealerConfig.WORM_HEAL_TICKS));
+        wormHealField.setEditable(canEditStealer);
+        wormHealField.setTooltip(Tooltip.create(Component.literal("1 second = 20 ticks. Default: 60 ticks (3 seconds) per Hijack point.")));
+        zombieChanceField = numberField(fieldX, 280, serverValue(StealerConfig.HIJACK_ZOMBIE_CHANCE));
+        drownedChanceField = numberField(fieldX, 302, serverValue(StealerConfig.HIJACK_DROWNED_CHANCE));
+        creeperChanceField = numberField(fieldX, 324, serverValue(StealerConfig.HIJACK_CREEPER_CHANCE));
+        for (EditBox field : new EditBox[]{zombieChanceField, drownedChanceField, creeperChanceField}) {
+            field.setEditable(canEditStealer);
+            field.setTooltip(Tooltip.create(Component.literal("Natural spawns only. 0–100%. Default: 5%.")));
+        }
+        for (var child : children()) if (child instanceof AbstractWidget widget) rows.put(widget, widget.getY());
+        resetButton = addRenderableWidget(Button.builder(Component.literal("Reset to Defaults"), button -> resetDefaults())
+                .bounds(width / 2 - 110, height - 24, 106, 20).build());
+        doneButton = addRenderableWidget(Button.builder(Component.literal("Done"), button -> onClose())
+                .bounds(width / 2 + 4, height - 24, 106, 20).build());
+        updateScroll();
+    }
+
+    private static <T> T serverValue(net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<T> value) {
+        if (net.minecraft.client.Minecraft.getInstance().player != null
+                && net.minecraft.client.Minecraft.getInstance().getSingleplayerServer() == null) {
+            return com.wentory.ransom_in_minecraft.network.CommonSettingsPayload.remoteValue(value);
+        }
+        return StealerConfig.SPEC.isLoaded() ? value.get() : value.getDefault();
+    }
+    private Component wormLabel() { return Component.literal("Ransom Hijack: " + (wormEnabled ? "ON" : "OFF")); }
+
+    private void updateScroll() {
+        scroll = Math.clamp(scroll, 0, Math.max(0, 350 - (height - 32)));
+        rows.forEach((widget, y) -> {
+            widget.setY(y - scroll);
+            widget.visible = widget.getY() >= 20 && widget.getY() + widget.getHeight() <= height - 32;
+        });
+    }
+
+    @Override public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
+        scroll -= (int) (deltaY * 20);
+        updateScroll();
+        return true;
     }
 
     private EditBox numberField(int x, int y, int value) {
@@ -48,8 +142,17 @@ public final class RansomConfigScreen extends Screen {
     }
 
     private Component deletionLabel() {
-        return Component.literal("Delete hotbar on failure: "
+        return Component.literal("Delete items: "
                 + (ClientConfig.DELETE_HOTBAR_ON_FAILURE.get() ? "ON" : "OFF"));
+    }
+
+    private Component biomeWhitelistLabel() {
+        return Component.literal("Biome whitelist: "
+                + (ClientConfig.BIOME_WHITELIST_ENABLED.get() ? "ON" : "OFF"));
+    }
+
+    private Component stealerLabel() {
+        return Component.literal("RANSOM: STEALER: " + (stealerEnabled ? "ON" : "OFF"));
     }
 
     private void resetDefaults() {
@@ -62,13 +165,28 @@ public final class RansomConfigScreen extends Screen {
         ClientConfig.INFECTION_RADIUS.set(64);
         ClientConfig.NATURAL_SPAWN_MIN_SECONDS.set(180);
         ClientConfig.NATURAL_SPAWN_MAX_SECONDS.set(360);
+        ClientConfig.BIOME_WHITELIST_ENABLED.set(false);
+        ClientConfig.BIOME_WHITELIST.set("");
 
         belowField.setValue("5");
         aboveField.setValue("5");
         radiusField.setValue("64");
         spawnMinField.setValue("180");
         spawnMaxField.setValue("360");
+        biomeWhitelistField.setValue("");
         deletionButton.setMessage(deletionLabel());
+        biomeWhitelistButton.setMessage(biomeWhitelistLabel());
+        if (canEditStealer) {
+            stealerEnabled = true;
+            stealerButton.setMessage(stealerLabel());
+            stealerChanceField.setValue("30");
+            wormEnabled = true;
+            wormButton.setMessage(wormLabel());
+            wormHealField.setValue("60");
+            zombieChanceField.setValue("5");
+            drownedChanceField.setValue("5");
+            creeperChanceField.setValue("5");
+        }
     }
 
     @Override
@@ -84,7 +202,26 @@ public final class RansomConfigScreen extends Screen {
         ClientConfig.INFECTION_RADIUS.set(radius);
         ClientConfig.NATURAL_SPAWN_MIN_SECONDS.set(spawnMin);
         ClientConfig.NATURAL_SPAWN_MAX_SECONDS.set(spawnMax);
+        ClientConfig.BIOME_WHITELIST.set(biomeWhitelistField.getValue().trim());
         ClientConfig.SPEC.save();
+        if (canEditStealer) {
+            int chance = parse(stealerChanceField, serverValue(StealerConfig.INFECTION_CHANCE_PERCENT), 0, 100);
+            if (minecraft.player == null || minecraft.getSingleplayerServer() != null) StealerConfig.ENABLED.set(stealerEnabled);
+            if (minecraft.player == null || minecraft.getSingleplayerServer() != null) StealerConfig.INFECTION_CHANCE_PERCENT.set(chance);
+            if (minecraft.player != null) PacketDistributor.sendToServer(new StealerSettingsPayload(stealerEnabled, chance));
+            int healingTicks = parse(wormHealField, serverValue(StealerConfig.WORM_HEAL_TICKS), 1, 72000);
+            StealerConfig.WORM_ENABLED.set(wormEnabled);
+            StealerConfig.WORM_HEAL_TICKS.set(healingTicks);
+            int zombieChance = parse(zombieChanceField, serverValue(StealerConfig.HIJACK_ZOMBIE_CHANCE), 0, 100);
+            int drownedChance = parse(drownedChanceField, serverValue(StealerConfig.HIJACK_DROWNED_CHANCE), 0, 100);
+            int creeperChance = parse(creeperChanceField, serverValue(StealerConfig.HIJACK_CREEPER_CHANCE), 0, 100);
+            StealerConfig.HIJACK_ZOMBIE_CHANCE.set(zombieChance);
+            StealerConfig.HIJACK_DROWNED_CHANCE.set(drownedChance);
+            StealerConfig.HIJACK_CREEPER_CHANCE.set(creeperChance);
+            if (minecraft.player != null) PacketDistributor.sendToServer(new WormSettingsPayload(wormEnabled, healingTicks,
+                    zombieChance, drownedChance, creeperChance));
+            if (minecraft.player == null || minecraft.getSingleplayerServer() != null) StealerConfig.SPEC.save();
+        }
         RansomEncounter.refreshNaturalSpawnTimer();
         minecraft.setScreen(parent);
     }
@@ -100,13 +237,27 @@ public final class RansomConfigScreen extends Screen {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
+        graphics.enableScissor(0, 20, width, height - 32);
         super.render(graphics, mouseX, mouseY, partialTick);
-        graphics.drawCenteredString(font, title, width / 2, 14, 0xFFFFFFFF);
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, -scroll, 0);
         int labelX = width / 2 - 128;
-        graphics.drawString(font, "Infection below player", labelX, 45, 0xFFFFFFFF, false);
-        graphics.drawString(font, "Infection above player", labelX, 69, 0xFFFFFFFF, false);
-        graphics.drawString(font, "Game radius (blocks)", labelX, 93, 0xFFFFFFFF, false);
-        graphics.drawString(font, "Spawn interval from (sec)", labelX, 117, 0xFFFFFFFF, false);
-        graphics.drawString(font, "Spawn interval to (sec)", labelX, 141, 0xFFFFFFFF, false);
+        graphics.drawString(font, "Infection below player", labelX, 29, 0xFFFFFFFF, false);
+        graphics.drawString(font, "Infection above player", labelX, 47, 0xFFFFFFFF, false);
+        graphics.drawString(font, "Game radius (blocks)", labelX, 65, 0xFFFFFFFF, false);
+        graphics.drawString(font, "Spawn interval from (sec)", labelX, 83, 0xFFFFFFFF, false);
+        graphics.drawString(font, "Spawn interval to (sec)", labelX, 101, 0xFFFFFFFF, false);
+        graphics.drawString(font, "Allowed biomes", labelX, 140, 0xFFFFFFFF, false);
+        graphics.drawString(font, "Chest infection chance (%)", labelX, 199, 0xFFFFFFFF, false);
+        graphics.drawString(font, "Hijack recovery interval (ticks)", labelX, 243, 0xFFFFFFFF, false);
+        graphics.drawString(font, "1 second = 20 ticks", labelX, 260, 0xFFAAAAAA, false);
+        graphics.drawString(font, "Hijacked zombie chance (%)", labelX, 285, 0xFFFFFFFF, false);
+        graphics.drawString(font, "Hijacked drowned chance (%)", labelX, 307, 0xFFFFFFFF, false);
+        graphics.drawString(font, "Hijacked creeper chance (%)", labelX, 329, 0xFFFFFFFF, false);
+        graphics.pose().popPose();
+        graphics.disableScissor();
+        resetButton.render(graphics, mouseX, mouseY, partialTick);
+        doneButton.render(graphics, mouseX, mouseY, partialTick);
+        graphics.drawCenteredString(font, title, width / 2, 8, 0xFFFFFFFF);
     }
 }

@@ -13,8 +13,34 @@ final class RansomRenderTypes extends RenderStateShard {
     }
 
     static RenderType infectedGlitch(ResourceLocation texture) {
+        return translucentGlitch("ransom_infected_glitch", texture);
+    }
+
+    static RenderType boundaryGlitch(ResourceLocation texture) {
+        return translucentGlitch("ransom_boundary_glitch", texture);
+    }
+
+    static RenderType boundaryFragments() {
         return RenderType.create(
-                "ransom_infected_glitch",
+                "ransom_boundary_fragments",
+                DefaultVertexFormat.POSITION_COLOR,
+                VertexFormat.Mode.QUADS,
+                1536,
+                false,
+                true,
+                RenderType.CompositeState.builder()
+                        .setShaderState(POSITION_COLOR_SHADER)
+                        .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                        .setCullState(NO_CULL)
+                        .setDepthTestState(LEQUAL_DEPTH_TEST)
+                        .setOutputState(ITEM_ENTITY_TARGET)
+                        .setWriteMaskState(COLOR_WRITE)
+                        .createCompositeState(false));
+    }
+
+    private static RenderType translucentGlitch(String name, ResourceLocation texture) {
+        return RenderType.create(
+                name,
                 DefaultVertexFormat.NEW_ENTITY,
                 VertexFormat.Mode.QUADS,
                 1536,
@@ -28,6 +54,7 @@ final class RansomRenderTypes extends RenderStateShard {
                         .setLightmapState(LIGHTMAP)
                         .setOverlayState(OVERLAY)
                         .setLayeringState(POLYGON_OFFSET_LAYERING)
+                        .setOutputState(ITEM_ENTITY_TARGET)
                         .setWriteMaskState(COLOR_WRITE)
                         .createCompositeState(false));
     }
