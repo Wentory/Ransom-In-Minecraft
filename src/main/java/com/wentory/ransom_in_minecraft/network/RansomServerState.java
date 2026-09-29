@@ -29,6 +29,7 @@ import java.util.UUID;
 
 @EventBusSubscriber(modid = RansomInMinecraft.MODID)
 public final class RansomServerState {
+    private static final String NATURAL_SPAWN_DISABLED = "ransom_natural_spawn_disabled";
     private static final String ACTIVE = "ransom_active";
     private static final String COINS = "ransom_coins";
     private static final String TARGET = "ransom_target";
@@ -57,6 +58,12 @@ public final class RansomServerState {
         event.getDispatcher().register(Commands.literal("ransom")
                 .requires(source -> source.hasPermission(2))
                 .executes(context -> summonRansom(context.getSource().getPlayerOrException()))
+                .then(Commands.literal("disable")
+                        .then(Commands.argument("targets", EntityArgument.players())
+                                .executes(context -> setNaturalSpawn(context.getSource(), EntityArgument.getPlayers(context, "targets"), false))))
+                .then(Commands.literal("enable")
+                        .then(Commands.argument("targets", EntityArgument.players())
+                                .executes(context -> setNaturalSpawn(context.getSource(), EntityArgument.getPlayers(context, "targets"), true))))
                 .then(Commands.argument("targets", EntityArgument.players())
                         .executes(context -> {
                             int summoned = 0;
@@ -65,6 +72,20 @@ public final class RansomServerState {
                             }
                             return summoned;
                         })));
+    }
+
+    private static int setNaturalSpawn(net.minecraft.commands.CommandSourceStack source, java.util.Collection<ServerPlayer> targets, boolean enabled) {
+        for (ServerPlayer target : targets) {
+            if (enabled) target.getPersistentData().remove(NATURAL_SPAWN_DISABLED);
+            else target.getPersistentData().putBoolean(NATURAL_SPAWN_DISABLED, true);
+            syncNaturalSpawnState(target);
+        }
+        source.sendSuccess(() -> Component.literal("Natural Ransom spawning " + (enabled ? "enabled" : "disabled") + " for " + targets.size() + " player(s)."), true);
+        return targets.size();
+    }
+
+    private static void syncNaturalSpawnState(ServerPlayer player) {
+        RansomNetwork.sendTo(player, new NaturalSpawnStatePayload(!player.getPersistentData().getBoolean(NATURAL_SPAWN_DISABLED)));
     }
 
     private static int summonRansom(ServerPlayer target) {
@@ -115,6 +136,7 @@ public final class RansomServerState {
     @SubscribeEvent
     public static void playerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer joining)) return;
+        syncNaturalSpawnState(joining);
         for (UUID infected : LOCKED_PLAYERS.keySet()) {
             RansomNetwork.sendTo(joining, new InfectionStatusPayload(infected, true));
         }
@@ -137,7 +159,11 @@ public final class RansomServerState {
 
     @SubscribeEvent
     public static void clonePlayer(PlayerEvent.Clone event) {
-        if (!event.isWasDeath() || !event.getOriginal().getPersistentData().getBoolean(ACTIVE)) return;
+        if (!event.isWasDeath()) return;
+        if (event.getOriginal().getPersistentData().getBoolean(NATURAL_SPAWN_DISABLED)) {
+            event.getEntity().getPersistentData().putBoolean(NATURAL_SPAWN_DISABLED, true);
+        }
+        if (!event.getOriginal().getPersistentData().getBoolean(ACTIVE)) return;
         var source = event.getOriginal().getPersistentData();
         var target = event.getEntity().getPersistentData();
         target.putBoolean(ACTIVE, true);

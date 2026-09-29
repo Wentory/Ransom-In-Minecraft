@@ -33,6 +33,9 @@ public final class RansomNetwork {
                 .encoder(RansomFailureArmedPayload::encode).decoder(RansomFailureArmedPayload::decode).consumerMainThread(RansomNetwork::armed).add();
         CHANNEL.messageBuilder(RansomFailureScarePayload.class, id++, NetworkDirection.PLAY_TO_CLIENT)
                 .encoder(RansomFailureScarePayload::encode).decoder(RansomFailureScarePayload::decode).consumerMainThread((p, c) -> client(c, () -> ClientRansomResumeTracker.acceptFailureScare(p))).add();
+        CHANNEL.messageBuilder(NaturalSpawnStatePayload.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(NaturalSpawnStatePayload::encode).decoder(NaturalSpawnStatePayload::decode)
+                .consumerMainThread((p, c) -> client(c, () -> ClientNaturalSpawnState.accept(p))).add();
         CHANNEL.messageBuilder(RansomSummonPayload.class, id++, NetworkDirection.PLAY_TO_CLIENT)
                 .encoder(RansomSummonPayload::encode).decoder(RansomSummonPayload::decode).consumerMainThread((p, c) -> client(c, () -> ClientRansomResumeTracker.acceptSummon(p))).add();
     }

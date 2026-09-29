@@ -10,6 +10,7 @@ import com.wentory.ransom_in_minecraft.RansomInMinecraft;
 import com.wentory.ransom_in_minecraft.network.RansomStatePayload;
 import com.wentory.ransom_in_minecraft.network.RansomProgressPayload;
 import com.wentory.ransom_in_minecraft.network.ClientRansomResumeTracker;
+import com.wentory.ransom_in_minecraft.network.ClientNaturalSpawnState;
 import com.wentory.ransom_in_minecraft.network.RansomFailureArmedPayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -239,7 +240,7 @@ public final class RansomEncounter {
 
         if (phase == Phase.IDLE) {
             if (automaticSpawnTicks < 0) automaticSpawnTicks = randomNaturalSpawnDelayTicks();
-            if (--automaticSpawnTicks <= 0 && naturalSpawnAllowedInCurrentBiome(minecraft)) startWarning(minecraft);
+            if (--automaticSpawnTicks <= 0 && ClientNaturalSpawnState.isEnabled() && naturalSpawnAllowedInCurrentBiome(minecraft)) startWarning(minecraft);
             return;
         }
 
