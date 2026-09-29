@@ -31,11 +31,9 @@ final class AnimatedSheetVertexConsumer implements VertexConsumer {
     }
 
     @Override public VertexConsumer setColor(int color) {
-        int adjustedAlpha = ((color >>> 24) * this.alpha / 255) & 0xFF;
-        delegate.setColor((color & 0x00FFFFFF) | (adjustedAlpha << 24));
-        return this;
+        return setColor(color >>> 16 & 255, color >>> 8 & 255, color & 255, color >>> 24);
     }
-
+    @Override public VertexConsumer setLineWidth(float width) { delegate.setLineWidth(width); return this; }
     @Override public VertexConsumer setUv(float u, float v) {
         delegate.setUv(u, (frame + v) / frameCount);
         return this;
@@ -53,11 +51,6 @@ final class AnimatedSheetVertexConsumer implements VertexConsumer {
 
     @Override public VertexConsumer setNormal(float x, float y, float z) {
         delegate.setNormal(x, y, z);
-        return this;
-    }
-
-    @Override public VertexConsumer setLineWidth(float width) {
-        delegate.setLineWidth(width);
         return this;
     }
 }

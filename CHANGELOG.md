@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.0
+
+- Ported Ransom 1.1 to Minecraft 26.2 for NeoForge and Fabric, including the updated Ransomware challenge, RANSOM: STEALER, Hijacked mobs and player Hijack.
+
 ## 1.0.1
 
 - Fixed infected block overlays disappearing when Sodium is installed.

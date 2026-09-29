@@ -11,6 +11,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class RansomPickBlockMixin {
     @Inject(method = "pickBlockOrEntity", at = @At("HEAD"), cancellable = true)
     private void ransom$blockPick(CallbackInfo ci) {
-        if (RansomEncounter.shouldBlockPickBlock()) ci.cancel();
+        if (RansomEncounter.handsLocked()) ci.cancel();
     }
 }

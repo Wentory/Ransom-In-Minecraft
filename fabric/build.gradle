@@ -8,6 +8,7 @@ group = mod_group_id
 base { archivesName = 'ransom-fabric-26.2' }
 
 loom {
+    accessWidenerPath = file('src/main/resources/ransom_in_minecraft.accesswidener')
     mods {
         ransom_in_minecraft {
             sourceSet sourceSets.main

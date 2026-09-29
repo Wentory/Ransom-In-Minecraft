@@ -1,79 +1,44 @@
 package com.wentory.ransom_in_minecraft;
 
-import net.fabricmc.loader.api.FabricLoader;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Properties;
-
+import com.wentory.ransom_in_minecraft.platform.ConfigSpec;
 public final class ClientConfig {
-    private static final Path FILE = FabricLoader.getInstance().getConfigDir().resolve("ransom_in_minecraft.properties");
-    private static final Properties VALUES = new Properties();
+    private static final ConfigSpec.Builder BUILDER = new ConfigSpec.Builder();
 
-    public static final Value<Double> JUMPSCARE_ENDS_AT = new Value<>("timing.jumpscareEndsAtSeconds", 1.0, Double::parseDouble);
-    public static final Value<Double> DOWNLOAD_STARTS_AT = new Value<>("timing.downloadStartsAtSeconds", 1.0, Double::parseDouble);
-    public static final Value<Double> DOWNLOAD_ENDS_AT = new Value<>("timing.downloadEndsAtSeconds", 2.0, Double::parseDouble);
-    public static final Value<Boolean> DELETE_HOTBAR_ON_FAILURE = new Value<>("punishment.deleteHotbarOnFailure", true, Boolean::parseBoolean);
-    public static final Value<Integer> INFECTION_VERTICAL_BELOW = new Value<>("game.infectionVerticalBelow", 5, Integer::parseInt);
-    public static final Value<Integer> INFECTION_VERTICAL_ABOVE = new Value<>("game.infectionVerticalAbove", 5, Integer::parseInt);
-    public static final Value<Integer> INFECTION_RADIUS = new Value<>("game.infectionRadius", 64, Integer::parseInt);
-    public static final Value<Integer> NATURAL_SPAWN_MIN_SECONDS = new Value<>("spawn.minimumSeconds", 180, Integer::parseInt);
-    public static final Value<Integer> NATURAL_SPAWN_MAX_SECONDS = new Value<>("spawn.maximumSeconds", 360, Integer::parseInt);
-    public static final Spec SPEC = new Spec();
+    public static final ConfigSpec.DoubleValue JUMPSCARE_ENDS_AT = BUILDER
+            .comment("Seconds after movement when the jumpscare image and sound stop.")
+            .defineInRange("timing.jumpscareEndsAtSeconds", 1.0, 0.05, 30.0);
+    public static final ConfigSpec.DoubleValue DOWNLOAD_STARTS_AT = BUILDER
+            .comment("Seconds after movement when the virus download bar appears.")
+            .defineInRange("timing.downloadStartsAtSeconds", 1.0, 0.0, 30.0);
+    public static final ConfigSpec.DoubleValue DOWNLOAD_ENDS_AT = BUILDER
+            .comment("Seconds after movement when the virus download bar disappears.")
+            .defineInRange("timing.downloadEndsAtSeconds", 2.0, 0.05, 30.0);
+    public static final ConfigSpec.BooleanValue DELETE_HOTBAR_ON_FAILURE = BUILDER
+            .comment("Delete the hotbar and every additionally encrypted inventory stack after the final failure jumpscare.")
+            .define("punishment.deleteHotbarOnFailure", true);
+    public static final ConfigSpec.IntValue INFECTION_VERTICAL_BELOW = BUILDER
+            .comment("How many blocks below the player infected blocks may spawn.")
+            .defineInRange("game.infectionVerticalBelow", 5, 0, 128);
+    public static final ConfigSpec.IntValue INFECTION_VERTICAL_ABOVE = BUILDER
+            .comment("How many blocks above the player infected blocks may spawn.")
+            .defineInRange("game.infectionVerticalAbove", 5, 0, 128);
+    public static final ConfigSpec.IntValue INFECTION_RADIUS = BUILDER
+            .comment("Horizontal game and infection radius in blocks.")
+            .defineInRange("game.infectionRadius", 64, 8, 256);
+    public static final ConfigSpec.IntValue NATURAL_SPAWN_MIN_SECONDS = BUILDER
+            .comment("Minimum delay between natural Ransom encounters, in seconds.")
+            .defineInRange("spawn.minimumSeconds", 180, 1, 86400);
+    public static final ConfigSpec.IntValue NATURAL_SPAWN_MAX_SECONDS = BUILDER
+            .comment("Maximum delay between natural Ransom encounters, in seconds. Values below the minimum are treated as the minimum.")
+            .defineInRange("spawn.maximumSeconds", 360, 1, 86400);
+    public static final ConfigSpec.BooleanValue BIOME_WHITELIST_ENABLED = BUILDER
+            .comment("Only allow natural Ransom encounters in the biome IDs listed in biomeWhitelist.")
+            .define("spawn.biomeWhitelistEnabled", false);
+    public static final ConfigSpec.ConfigValue<String> BIOME_WHITELIST = BUILDER
+            .comment("Comma-separated biome IDs where Ransom may naturally appear, for example: minecraft:plains, minecraft:forest")
+            .define("spawn.biomeWhitelist", "");
+    public static final ConfigSpec SPEC = BUILDER.build();
 
-    private ClientConfig() {}
-
-    public static void load() {
-        if (!Files.exists(FILE)) return;
-        try (InputStream stream = Files.newInputStream(FILE)) {
-            VALUES.load(stream);
-            JUMPSCARE_ENDS_AT.load();
-            DOWNLOAD_STARTS_AT.load();
-            DOWNLOAD_ENDS_AT.load();
-            DELETE_HOTBAR_ON_FAILURE.load();
-            INFECTION_VERTICAL_BELOW.load();
-            INFECTION_VERTICAL_ABOVE.load();
-            INFECTION_RADIUS.load();
-            NATURAL_SPAWN_MIN_SECONDS.load();
-            NATURAL_SPAWN_MAX_SECONDS.load();
-        } catch (IOException ignored) {
-        }
-    }
-
-    public static final class Value<T> {
-        private final String key;
-        private final T fallback;
-        private final java.util.function.Function<String, T> parser;
-        private T value;
-        private Value(String key, T fallback, java.util.function.Function<String, T> parser) {
-            this.key = key;
-            this.fallback = fallback;
-            this.parser = parser;
-            this.value = fallback;
-        }
-        public T get() { return value; }
-        public void set(T value) {
-            this.value = value;
-            VALUES.setProperty(key, value.toString());
-        }
-        private void load() {
-            try { value = parser.apply(VALUES.getProperty(key, fallback.toString())); }
-            catch (RuntimeException ignored) { value = fallback; }
-        }
-    }
-
-    public static final class Spec {
-        public void save() {
-            try {
-                Files.createDirectories(FILE.getParent());
-                try (OutputStream stream = Files.newOutputStream(FILE)) {
-                    VALUES.store(stream, "Ransom In Minecraft settings");
-                }
-            } catch (IOException ignored) {
-            }
-        }
+    private ClientConfig() {
     }
 }

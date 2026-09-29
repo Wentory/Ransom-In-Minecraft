@@ -10,5 +10,7 @@
   "death.attack.ransom_debt": "%1$s умер от долгов",
   "death.attack.ransom_debt_no_coins": "%1$s даже не пытался спастись от долгов",
   "death.attack.ransom_debt_inattentive": "%1$s оказался невнимательным",
-  "death.attack.ransom_debt_late": "%1$s не успел найти деньги"
+  "death.attack.ransom_debt_late": "%1$s не успел найти деньги",
+  "death.attack.ransom_glitch": "%1$s был повреждён глитч-зоной",
+  "key.categories.ransom_in_minecraft": "Ransom In Minecraft"
 }

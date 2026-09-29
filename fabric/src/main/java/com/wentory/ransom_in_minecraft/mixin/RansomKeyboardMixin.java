@@ -12,6 +12,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class RansomKeyboardMixin {
     @Inject(method = "keyPress", at = @At("HEAD"))
     private void ransom$keyPress(long window, int action, KeyEvent key, CallbackInfo ci) {
-        RansomEncounter.keyInput(key.key(), action);
+        RansomEncounter.keyInput(new com.wentory.ransom_in_minecraft.platform.FabricEvents.InputEvent.Key(key.key(), action));
     }
 }

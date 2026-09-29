@@ -14,6 +14,7 @@
     "modmenu": ["com.wentory.ransom_in_minecraft.client.RansomModMenu"]
   },
   "mixins": ["ransom_in_minecraft.fabric.mixins.json"],
+  "accessWidener": "ransom_in_minecraft.accesswidener",
   "depends": {
     "fabricloader": ">=0.19.5",
     "fabric-api": "*",
