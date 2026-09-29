@@ -15,22 +15,28 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class HotbarLockMenuMixin {
     @Inject(method = "clicked", at = @At("HEAD"), cancellable = true)
     private void ransom$lockHotbar(int slotId, int button, ClickType clickType, Player player, CallbackInfo ci) {
-        if (!RansomServerState.isHotbarLocked(player)) return;
-
         AbstractContainerMenu menu = (AbstractContainerMenu) (Object) this;
-        boolean clickedHotbar = slotId >= 0 && slotId < menu.slots.size()
+        boolean hotbarLocked = RansomServerState.isHotbarLocked(player);
+        boolean clickedHotbar = hotbarLocked && slotId >= 0 && slotId < menu.slots.size()
                 && isPlayerHotbar(menu.getSlot(slotId), player);
-        boolean targetsHotbarByNumber = clickType == ClickType.SWAP
+        boolean clickedEncrypted = slotId >= 0 && slotId < menu.slots.size()
+                && isPlayerEncrypted(menu.getSlot(slotId), player);
+        boolean targetsHotbarByNumber = hotbarLocked && clickType == ClickType.SWAP
                 && button >= 0 && button < Inventory.getSelectionSize();
-        boolean canMoveIntoHotbarAutomatically = clickType == ClickType.QUICK_MOVE
-                || clickType == ClickType.PICKUP_ALL;
+        boolean canMoveIntoLockedSlotsAutomatically = hotbarLocked
+                && (clickType == ClickType.QUICK_MOVE || clickType == ClickType.PICKUP_ALL);
 
-        if (clickedHotbar || targetsHotbarByNumber || canMoveIntoHotbarAutomatically) ci.cancel();
+        if (clickedHotbar || clickedEncrypted || targetsHotbarByNumber || canMoveIntoLockedSlotsAutomatically) ci.cancel();
     }
 
     private static boolean isPlayerHotbar(Slot slot, Player player) {
         return slot.container == player.getInventory()
                 && slot.getContainerSlot() >= 0
                 && slot.getContainerSlot() < Inventory.getSelectionSize();
+    }
+
+    private static boolean isPlayerEncrypted(Slot slot, Player player) {
+        return slot.container == player.getInventory()
+                && RansomServerState.isInventorySlotEncrypted(player, slot.getContainerSlot());
     }
 }

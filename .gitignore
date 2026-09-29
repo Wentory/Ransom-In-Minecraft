@@ -19,3 +19,7 @@ hs_err_pid*
 
 # Common working directory
 run
+
+# Local development artifacts and build logs
+artifacts/
+build-*.log

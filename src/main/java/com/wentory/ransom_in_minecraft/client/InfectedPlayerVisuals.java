@@ -12,6 +12,7 @@ import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -40,21 +41,66 @@ public final class InfectedPlayerVisuals {
         public void render(PoseStack poseStack, MultiBufferSource buffers, int packedLight,
                            AbstractClientPlayer player, float limbSwing, float limbSwingAmount,
                            float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
-            if (!ClientInfectionTracker.isInfected(player.getUUID()) || player.isInvisible()) return;
+            if (player.isInvisible() || player.isDeadOrDying()) return;
+
+            boolean infected = ClientInfectionTracker.isInfected(player.getUUID());
+            float extraGlitch = InfectedPlayerGlitchRenderer.extraGlitchStrength(player);
+            float success = InfectedPlayerGlitchRenderer.successStrength(player);
+            if (!infected && extraGlitch <= 0.0F && success <= 0.0F) return;
 
             PlayerModel<AbstractClientPlayer> model = getParentModel();
-            poseStack.pushPose();
-            poseStack.scale(1.035F, 1.035F, 1.035F);
-            model.renderToBuffer(poseStack,
-                    buffers.getBuffer(RenderType.entityTranslucent(player.getSkin().texture())),
-                    packedLight, OverlayTexture.NO_OVERLAY, 0x70FF1010);
-            poseStack.popPose();
-
             int frame = (player.tickCount / 2) % 6;
-            var animated = new AnimatedSheetVertexConsumer(
-                    buffers.getBuffer(RenderType.entityTranslucentEmissive(GLITCH)), frame, 6);
-            model.renderToBuffer(poseStack, animated,
-                    0x00F000F0, OverlayTexture.NO_OVERLAY, 0x80FFFFFF);
+            if (infected) {
+                poseStack.pushPose();
+                poseStack.scale(1.035F, 1.035F, 1.035F);
+                model.renderToBuffer(poseStack,
+                        buffers.getBuffer(RenderType.entityTranslucent(player.getSkin().texture())),
+                        packedLight, OverlayTexture.NO_OVERLAY, 0x70FF1010);
+                poseStack.popPose();
+
+                var animated = new AnimatedSheetVertexConsumer(
+                        buffers.getBuffer(RenderType.entityTranslucentEmissive(GLITCH)), frame, 6);
+                model.renderToBuffer(poseStack, animated,
+                        0x00F000F0, OverlayTexture.NO_OVERLAY, 0x80FFFFFF);
+            }
+
+            if (extraGlitch > 0.0F) {
+                int alpha = Math.min(255, 90 + Math.round(extraGlitch * 150.0F));
+                int copies = extraGlitch > 0.7F ? 3 : 1;
+                for (int copy = 0; copy < copies; copy++) {
+                    float direction = copy % 2 == 0 ? -1.0F : 1.0F;
+                    float offset = direction * (0.012F + copy * 0.009F) * extraGlitch;
+                    poseStack.pushPose();
+                    poseStack.translate(offset, (copy - 1) * 0.006F * extraGlitch, -0.004F * copy);
+                    var burst = new AnimatedSheetVertexConsumer(
+                            buffers.getBuffer(RenderType.entityTranslucentEmissive(GLITCH)),
+                            frame + copy * 2, 6, alpha);
+                    model.renderToBuffer(poseStack, burst,
+                            0x00F000F0, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
+                    poseStack.popPose();
+                }
+
+                if (extraGlitch > 0.7F && (player.tickCount & 1) == 0) {
+                    poseStack.pushPose();
+                    poseStack.scale(1.055F, 1.025F, 1.055F);
+                    model.renderToBuffer(poseStack,
+                            buffers.getBuffer(RenderType.entityTranslucent(player.getSkin().texture())),
+                            0x00F000F0, OverlayTexture.NO_OVERLAY,
+                            (Math.round(115.0F * extraGlitch) << 24) | 0x00FF0808);
+                    poseStack.popPose();
+                }
+            }
+
+            if (success > 0.0F) {
+                int alpha = Math.round((90.0F + ((player.tickCount & 1) == 0 ? 100.0F : 35.0F)) * success);
+                poseStack.pushPose();
+                poseStack.scale(1.04F, 1.04F, 1.04F);
+                model.renderToBuffer(poseStack,
+                        buffers.getBuffer(RenderType.entityTranslucentEmissive(player.getSkin().texture())),
+                        0x00F000F0, OverlayTexture.NO_OVERLAY,
+                        (Mth.clamp(alpha, 0, 220) << 24) | 0x0030FF55);
+                poseStack.popPose();
+            }
         }
     }
 
