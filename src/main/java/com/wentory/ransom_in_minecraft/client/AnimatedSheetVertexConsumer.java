@@ -45,16 +45,11 @@ final class AnimatedSheetVertexConsumer implements VertexConsumer {
         return this;
     }
 
+    @Override public void endVertex() { delegate.endVertex(); }
+    @Override public void defaultColor(int r, int g, int b, int a) { delegate.defaultColor(r, g, b, a); }
+    @Override public void unsetDefaultColor() { delegate.unsetDefaultColor(); }
     @Override public VertexConsumer normal(float x, float y, float z) {
         delegate.normal(x, y, z);
         return this;
     }
-
-    @Override public void endVertex() { delegate.endVertex(); }
-
-    @Override public void defaultColor(int red, int green, int blue, int alpha) {
-        delegate.defaultColor(red, green, blue, alpha * this.alpha / 255);
-    }
-
-    @Override public void unsetDefaultColor() { delegate.unsetDefaultColor(); }
 }

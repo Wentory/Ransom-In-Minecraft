@@ -1,7 +1,17 @@
 package com.wentory.ransom_in_minecraft.network;
+
 import net.minecraft.network.FriendlyByteBuf;
 import java.util.UUID;
+
 public record InfectionStatusPayload(UUID playerId, boolean infected) {
- static void encode(InfectionStatusPayload p, FriendlyByteBuf b){b.writeUUID(p.playerId);b.writeBoolean(p.infected);}
- static InfectionStatusPayload decode(FriendlyByteBuf b){return new InfectionStatusPayload(b.readUUID(),b.readBoolean());}
+    public static final Class<InfectionStatusPayload> TYPE = InfectionStatusPayload.class;
+    public static final Object STREAM_CODEC = new Object();
+    public static void encode(InfectionStatusPayload payload, FriendlyByteBuf buffer) {
+        buffer.writeUUID(payload.playerId());
+        buffer.writeBoolean(payload.infected());
+    }
+    public static InfectionStatusPayload decode(FriendlyByteBuf buffer) {
+        return new InfectionStatusPayload(buffer.readUUID(), buffer.readBoolean());
+    }
+
 }

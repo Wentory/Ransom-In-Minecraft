@@ -1,6 +1,20 @@
 package com.wentory.ransom_in_minecraft.network;
+
 import net.minecraft.network.FriendlyByteBuf;
-public record RansomStatePayload(boolean active, boolean failure, int coins, int penaltyDamage, boolean deleteHotbar) {
- static void encode(RansomStatePayload p,FriendlyByteBuf b){b.writeBoolean(p.active);b.writeBoolean(p.failure);b.writeVarInt(p.coins);b.writeVarInt(p.penaltyDamage);b.writeBoolean(p.deleteHotbar);}
- static RansomStatePayload decode(FriendlyByteBuf b){return new RansomStatePayload(b.readBoolean(),b.readBoolean(),b.readVarInt(),b.readVarInt(),b.readBoolean());}
+
+public record RansomStatePayload(boolean active, boolean failure, int coins, int penaltyDamage,
+                                 boolean deleteHotbar) {
+    public static final Class<RansomStatePayload> TYPE = RansomStatePayload.class;
+    public static final Object STREAM_CODEC = new Object();
+    public static void encode(RansomStatePayload payload, FriendlyByteBuf buffer) {
+        buffer.writeBoolean(payload.active());
+        buffer.writeBoolean(payload.failure());
+        buffer.writeVarInt(payload.coins());
+        buffer.writeVarInt(payload.penaltyDamage());
+        buffer.writeBoolean(payload.deleteHotbar());
+    }
+    public static RansomStatePayload decode(FriendlyByteBuf buffer) {
+        return new RansomStatePayload(buffer.readBoolean(), buffer.readBoolean(), buffer.readVarInt(), buffer.readVarInt(), buffer.readBoolean());
+    }
+
 }

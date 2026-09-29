@@ -4,7 +4,27 @@
   "package": "com.wentory.ransom_in_minecraft.mixin",
   "compatibilityLevel": "JAVA_17",
   "refmap": "ransom_in_minecraft.refmap.json",
-  "mixins": ["HotbarLockMenuMixin", "InventoryHotbarLockMixin"],
-  "client": ["ItemInHandRendererInvoker", "SoundManagerAccessor", "SoundEngineAccessor"],
-  "injectors": {"defaultRequire": 1}
+  "mixins": [
+    "HotbarLockMenuMixin",
+    "InventoryHotbarLockMixin",
+    "EncryptedSlotMixin",
+    "ZombieBodyControlMixin",
+    "InfectedZombieSunMixin",
+    "InfectedZombieSoundMixin",
+    "InfectedCreeperMixin",
+    "InfectedZombieJumpMixin",
+    "HijackedWaterTravelMixin",
+    "InfectedCreeperDimensionsMixin"
+  ],
+  "client": [
+    "ItemInHandRendererInvoker",
+    "SoundManagerAccessor",
+    "SoundEngineAccessor",
+    "InfectedZombieModelMixin",
+    "HijackedDrownedModelMixin",
+    "InfectedCreeperModelMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
 }

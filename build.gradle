@@ -24,7 +24,7 @@ version = mod_version
 group = mod_group_id
 
 base {
-    archivesName = "${mod_id}-forge-1.20.1"
+    archivesName = "ransom-forge-1.20.1"
 }
 
 java {
@@ -87,6 +87,10 @@ tasks.named('processResources', ProcessResources).configure {
     }
 }
 
+tasks.named('compileJava') {
+    outputs.cacheIf { false }
+}
+
 jar {
     manifest {
         attributes 'MixinConfigs': 'ransom_in_minecraft.mixins.json'
@@ -101,3 +105,5 @@ publishing {
         }
     }
 }
+
+tasks.withType(JavaCompile).configureEach { options.compilerArgs += ['-Xmaxerrs', '1000'] }
