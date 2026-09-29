@@ -12,11 +12,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class RansomMouseMixin {
     @Inject(method = "onButton", at = @At("HEAD"))
     private void ransom$mouseButton(long window, MouseButtonInfo button, int action, CallbackInfo ci) {
-        RansomEncounter.mouseInput(action);
+        RansomEncounter.mouseInput(new com.wentory.ransom_in_minecraft.platform.FabricEvents.InputEvent.MouseButton.Pre(action));
     }
 
     @Inject(method = "onScroll", at = @At("HEAD"), cancellable = true)
     private void ransom$blockHotbarScroll(long window, double horizontal, double vertical, CallbackInfo ci) {
-        if (RansomEncounter.shouldBlockScroll()) ci.cancel();
+        if (RansomEncounter.handsLocked()) ci.cancel();
     }
 }

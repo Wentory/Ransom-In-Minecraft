@@ -4,6 +4,7 @@ public final class ClientRansomResumeTracker {
     private static RansomResumePayload pending;
     private static RansomFailureScarePayload failureScarePending;
     private static boolean summonPending;
+    private static boolean forcedAttackPending;
     private ClientRansomResumeTracker() {}
     public static synchronized void accept(RansomResumePayload payload) { pending = payload; }
     public static synchronized RansomResumePayload consume() {
@@ -28,9 +29,19 @@ public final class ClientRansomResumeTracker {
         return result;
     }
 
+    public static synchronized void acceptForcedAttack(RansomForcedAttackPayload payload) {
+        if (payload.attack()) forcedAttackPending = true;
+    }
+    public static synchronized boolean consumeForcedAttack() {
+        boolean result = forcedAttackPending;
+        forcedAttackPending = false;
+        return result;
+    }
+
     public static synchronized void clear() {
         pending = null;
         failureScarePending = null;
         summonPending = false;
+        forcedAttackPending = false;
     }
 }

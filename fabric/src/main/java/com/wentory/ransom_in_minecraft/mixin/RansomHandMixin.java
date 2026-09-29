@@ -24,7 +24,7 @@ public abstract class RansomHandMixin {
                                      InteractionHand hand, float swingProgress, ItemStack stack,
                                      float equipProgress, PoseStack poseStack, SubmitNodeCollector collector,
                                      int packedLight, CallbackInfo ci) {
-        if (!RansomEncounter.shouldHideHeldItem() || stack.isEmpty()) return;
+        if (!RansomEncounter.handsLocked() || stack.isEmpty()) return;
         ci.cancel();
         if (hand == InteractionHand.MAIN_HAND)
             renderPlayerArm(poseStack, collector, packedLight, equipProgress, swingProgress, player.getMainArm());

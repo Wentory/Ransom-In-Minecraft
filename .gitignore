@@ -28,3 +28,8 @@ compile-*.log
 build-*.log
 run-*.log
 
+# Temporary local migration tools and source backups
+.port-api/
+port-*.log
+port-backup-*.zip
+

@@ -13,9 +13,11 @@ public abstract class InventoryHotbarLockMixin {
     @Inject(method = "getFreeSlot", at = @At("HEAD"), cancellable = true)
     private void ransom$getUnlockedFreeSlot(CallbackInfoReturnable<Integer> cir) {
         Inventory inventory = (Inventory) (Object) this;
-        if (!RansomServerState.isHotbarLocked(inventory.player)) return;
+        if (!RansomServerState.isHotbarLocked(inventory.player)
+                && !RansomServerState.hasEncryptedInventorySlots(inventory.player)) return;
         for (int slot = Inventory.getSelectionSize(); slot < 36; slot++) {
-            if (inventory.getItem(slot).isEmpty()) {
+            if (!RansomServerState.isInventorySlotEncrypted(inventory.player, slot)
+                    && inventory.getItem(slot).isEmpty()) {
                 cir.setReturnValue(slot);
                 return;
             }
@@ -26,8 +28,10 @@ public abstract class InventoryHotbarLockMixin {
     @Inject(method = "getSlotWithRemainingSpace", at = @At("HEAD"), cancellable = true)
     private void ransom$getUnlockedStackSlot(ItemStack incoming, CallbackInfoReturnable<Integer> cir) {
         Inventory inventory = (Inventory) (Object) this;
-        if (!RansomServerState.isHotbarLocked(inventory.player)) return;
+        if (!RansomServerState.isHotbarLocked(inventory.player)
+                && !RansomServerState.hasEncryptedInventorySlots(inventory.player)) return;
         for (int slot = Inventory.getSelectionSize(); slot < 36; slot++) {
+            if (RansomServerState.isInventorySlotEncrypted(inventory.player, slot)) continue;
             ItemStack existing = inventory.getItem(slot);
             if (ItemStack.isSameItemSameComponents(existing, incoming)
                     && existing.getCount() < existing.getMaxStackSize()) {

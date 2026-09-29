@@ -3,7 +3,42 @@
   "minVersion": "0.8",
   "package": "com.wentory.ransom_in_minecraft.mixin",
   "compatibilityLevel": "JAVA_25",
-  "mixins": ["HotbarLockMenuMixin", "InventoryHotbarLockMixin", "InventorySelectionAccessor"],
-  "client": ["ItemInHandRendererInvoker", "SoundManagerAccessor", "SoundEngineAccessor", "RansomKeyboardMixin", "RansomMouseMixin", "RansomPickBlockMixin", "RansomHandMixin"],
-  "injectors": {"defaultRequire": 1}
+  "mixins": [
+    "InventorySelectionAccessor",
+    "HotbarLockMenuMixin",
+    "InventoryHotbarLockMixin",
+    "EncryptedSlotMixin",
+    "ZombieBodyControlMixin",
+    "InfectedZombieSunMixin",
+    "InfectedZombieSoundMixin",
+    "InfectedCreeperMixin",
+    "InfectedZombieJumpMixin",
+    "HijackedWaterTravelMixin",
+    "InfectedCreeperDimensionsMixin",
+    "FabricMobLifecycleMixin",
+    "FabricLivingLifecycleMixin",
+    "FabricEntityTickMixin",
+    "FabricChestRemovalMixin",
+    "FabricChunkTrackingMixin"
+  ],
+  "client": [
+    "ItemInHandRendererInvoker",
+    "SoundManagerAccessor",
+    "SoundEngineAccessor",
+    "InfectedZombieModelMixin",
+    "HijackedDrownedModelMixin",
+    "InfectedCreeperModelMixin",
+    "RenderStateEntityMixin",
+    "RansomKeyboardMixin",
+    "RansomMouseMixin",
+    "RansomPickBlockMixin",
+    "RansomHandMixin",
+    "FabricLivingRenderMixin",
+    "FabricHudMixin",
+    "FabricInteractionMixin",
+    "GuiGraphicsStateAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
 }
