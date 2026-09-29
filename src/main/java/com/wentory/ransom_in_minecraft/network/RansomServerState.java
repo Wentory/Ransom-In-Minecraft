@@ -175,9 +175,9 @@ public final class RansomServerState {
     }
 
     private static void fail(ServerPlayer player, int coins, boolean deleteHotbar) {
-        damage(player, 10, coins);
         if (deleteHotbar) deleteHotbar(player);
         else unlockHands(player);
+        damage(player, 10, coins);
     }
 
     private static void damage(ServerPlayer player, int amount, int coins) {
