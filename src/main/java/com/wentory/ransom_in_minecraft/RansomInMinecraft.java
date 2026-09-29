@@ -1,7 +1,7 @@
 package com.wentory.ransom_in_minecraft;
 
 import com.wentory.ransom_in_minecraft.network.RansomServerState;
-import com.wentory.ransom_in_minecraft.client.RansomConfigScreen;
+import com.wentory.ransom_in_minecraft.client.RansomClientSetup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
@@ -11,7 +11,6 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -61,8 +60,7 @@ public class RansomInMinecraft {
         container.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
         container.registerConfig(ModConfig.Type.COMMON, StealerConfig.SPEC);
         if (FMLEnvironment.dist == Dist.CLIENT) {
-            container.registerExtensionPoint(IConfigScreenFactory.class,
-                    (mod, parent) -> new RansomConfigScreen(parent));
+            RansomClientSetup.registerConfigScreen(container);
         }
     }
 
