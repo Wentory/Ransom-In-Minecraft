@@ -239,7 +239,7 @@ public final class RansomEncounter {
 
         if (phase == Phase.IDLE) {
             if (automaticSpawnTicks < 0) automaticSpawnTicks = randomNaturalSpawnDelayTicks();
-            if (--automaticSpawnTicks <= 0) startWarning(minecraft);
+            if (--automaticSpawnTicks <= 0 && naturalSpawnAllowedInCurrentBiome(minecraft)) startWarning(minecraft);
             return;
         }
 
@@ -1215,6 +1215,18 @@ public final class RansomEncounter {
 
     private static int infectionRadius() {
         return ClientConfig.INFECTION_RADIUS.get();
+    }
+
+    private static boolean naturalSpawnAllowedInCurrentBiome(Minecraft minecraft) {
+        if (!ClientConfig.BIOME_WHITELIST_ENABLED.get()) return true;
+        if (minecraft.level == null || minecraft.player == null) return false;
+        var biomeKey = minecraft.level.getBiome(minecraft.player.blockPosition()).unwrapKey();
+        if (biomeKey.isEmpty()) return false;
+        String currentBiome = biomeKey.get().location().toString();
+        for (String configuredBiome : ClientConfig.BIOME_WHITELIST.get().split(",")) {
+            if (currentBiome.equals(configuredBiome.trim())) return true;
+        }
+        return false;
     }
 
     private static int randomNaturalSpawnDelayTicks() {

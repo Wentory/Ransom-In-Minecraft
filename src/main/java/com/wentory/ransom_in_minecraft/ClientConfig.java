@@ -32,6 +32,12 @@ public final class ClientConfig {
     public static final ForgeConfigSpec.IntValue NATURAL_SPAWN_MAX_SECONDS = BUILDER
             .comment("Maximum delay between natural Ransom encounters, in seconds. Values below the minimum are treated as the minimum.")
             .defineInRange("spawn.maximumSeconds", 360, 1, 86400);
+    public static final ForgeConfigSpec.BooleanValue BIOME_WHITELIST_ENABLED = BUILDER
+            .comment("Only allow natural Ransom encounters in the biome IDs listed below.")
+            .define("spawn.biomeWhitelistEnabled", false);
+    public static final ForgeConfigSpec.ConfigValue<String> BIOME_WHITELIST = BUILDER
+            .comment("Comma-separated biome IDs, for example: minecraft:plains, minecraft:forest")
+            .define("spawn.biomeWhitelist", "");
     public static final ForgeConfigSpec SPEC = BUILDER.build();
 
     private ClientConfig() {
