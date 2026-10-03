@@ -51,6 +51,7 @@ public final class RansomChestGame {
     private static final String OWNER = "ransom_infected_owner";
     private static final String SESSION = "ransom_chest_session";
     private static final Map<UUID, Session> SESSIONS = new HashMap<>();
+    public static boolean hasActiveGame(ServerPlayer player) { return SESSIONS.containsKey(player.getUUID()); }
     private static final List<PendingHit> PENDING_HITS = new ArrayList<>();
     private static final List<PendingLidClose> PENDING_LIDS = new ArrayList<>();
     private static final String[] KEYS = {"A", "S", "D", "F", "G", "H", "J", "K", "L", "W", "E", "R"};
@@ -330,12 +331,21 @@ public final class RansomChestGame {
         finishSession(session, player);
     }
 
+    public static boolean preservesAir(net.minecraft.server.level.ServerPlayer player) {
+        Session session = SESSIONS.get(player.getUUID());
+        return player.isAlive() && player.isUnderWater()
+                && player.containerMenu instanceof SealedChestMenu
+                && session != null && session.level == player.level() && StealerConfig.ENABLED.get()
+                && !ReplayCompatibility.isReplayServer(player.level().getServer());
+    }
+
     public static void logout(PlayerEvent.PlayerLoggedOutEvent event) {
         Session session = SESSIONS.get(event.getEntity().getUUID());
         if (session != null) saveSession(session);
     }
 
     public static void tick(ServerTickEvent.Post event) {
+        if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(event.getServer())) return;
         if (event.getServer().getTickCount() % 5 != 0) return;
         if (!StealerConfig.ENABLED.get()) {
             for (Session session : List.copyOf(SESSIONS.values())) {

@@ -50,7 +50,14 @@ public final class RansomFabric implements ModInitializer {
     }
     public void onInitialize() {
         com.wentory.ransom_in_minecraft.platform.PersistentData.initialize();
-        ClientConfig.SPEC.load("ransom_in_minecraft.properties");
+        try {
+            var dir = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir();
+            var oldConfig = dir.resolve("ransom_in_minecraft.properties");
+            var newConfig = dir.resolve("ransom_in_minecraft-ransomware.properties");
+            if (java.nio.file.Files.exists(oldConfig) && !java.nio.file.Files.exists(newConfig))
+                java.nio.file.Files.copy(oldConfig, newConfig);
+        } catch (java.io.IOException exception) { throw new java.io.UncheckedIOException(exception); }
+        RansomwareConfig.SPEC.load("ransom_in_minecraft-ransomware.properties");
         StealerConfig.SPEC.load("ransom_in_minecraft-common.properties");
         com.wentory.ransom_in_minecraft.platform.FabricHooks.initialize();
     }

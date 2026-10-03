@@ -2,7 +2,7 @@ package com.wentory.ransom_in_minecraft;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 
-public final class ClientConfig {
+public final class RansomwareConfig {
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
     public static final ModConfigSpec.DoubleValue JUMPSCARE_ENDS_AT = BUILDER
@@ -40,6 +40,6 @@ public final class ClientConfig {
             .define("spawn.biomeWhitelist", "");
     public static final ModConfigSpec SPEC = BUILDER.build();
 
-    private ClientConfig() {
+    private RansomwareConfig() {
     }
 }

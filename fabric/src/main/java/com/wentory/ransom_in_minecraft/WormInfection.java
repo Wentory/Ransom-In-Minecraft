@@ -23,6 +23,7 @@ public final class WormInfection {
     private WormInfection() {}
     public static int get(ServerPlayer player) { return Math.clamp(com.wentory.ransom_in_minecraft.platform.PersistentData.of(player).getIntOr(VALUE, 0), 0, 100); }
     public static int set(ServerPlayer player, int value) {
+        if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(player.level().getServer())) return get(player);
         int next = StealerConfig.WORM_ENABLED.get() && player.isAlive() ? Math.clamp(value, 0, 100) : 0;
         com.wentory.ransom_in_minecraft.platform.PersistentData.of(player).putInt(VALUE, next);
         FabricNetwork.sendToPlayer(player, new WormInfectionPayload(next));
@@ -31,6 +32,7 @@ public final class WormInfection {
     public static void add(ServerPlayer player, int amount) { set(player, get(player) + amount); }
 
     public static void tick(PlayerTickEvent.Post event) {
+        if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(event.getEntity().level().getServer())) return;
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         int value = get(player);
         if (!StealerConfig.WORM_ENABLED.get() || !player.isAlive()) {

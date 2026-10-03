@@ -1,7 +1,6 @@
 package com.wentory.ransom_in_minecraft;
 
 import com.wentory.ransom_in_minecraft.network.RansomServerState;
-import com.wentory.ransom_in_minecraft.client.RansomConfigScreen;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
@@ -11,7 +10,6 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -58,16 +56,19 @@ public class RansomInMinecraft {
     public RansomInMinecraft(IEventBus modBus, ModContainer container) {
         SOUNDS.register(modBus);
         modBus.addListener(RansomServerState::registerPayloads);
-        container.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
+        try {
+            var dir = net.neoforged.fml.loading.FMLPaths.CONFIGDIR.get();
+            var oldConfig = dir.resolve("ransom_in_minecraft-client.toml");
+            var newConfig = dir.resolve("ransom_in_minecraft-ransomware.toml");
+            if (java.nio.file.Files.exists(oldConfig) && !java.nio.file.Files.exists(newConfig))
+                java.nio.file.Files.copy(oldConfig, newConfig);
+        } catch (java.io.IOException exception) {
+            throw new java.io.UncheckedIOException(exception);
+        }
+        container.registerConfig(ModConfig.Type.COMMON, RansomwareConfig.SPEC, "ransom_in_minecraft-ransomware.toml");
         container.registerConfig(ModConfig.Type.COMMON, StealerConfig.SPEC);
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
- modBus.addListener(com.wentory.ransom_in_minecraft.client.InfectedPlayerVisuals::addPlayerLayers);
- modBus.addListener(com.wentory.ransom_in_minecraft.client.InfectedZombieLayers::addLayers);
- modBus.addListener(com.wentory.ransom_in_minecraft.client.InfectedCreeperVisuals.Layers::add);
- modBus.addListener(com.wentory.ransom_in_minecraft.client.WormIllusionLayers::add);
- modBus.addListener(com.wentory.ransom_in_minecraft.client.ChestPreviewRenderer::register);
-            container.registerExtensionPoint(IConfigScreenFactory.class,
-                    (mod, parent) -> new RansomConfigScreen(parent));
+            com.wentory.ransom_in_minecraft.client.RansomClientSetup.register(modBus, container);
         }
     }
 

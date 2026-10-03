@@ -1,7 +1,8 @@
 package com.wentory.ransom_in_minecraft;
 
 import com.wentory.ransom_in_minecraft.platform.ConfigSpec;
-public final class ClientConfig {
+
+public final class RansomwareConfig {
     private static final ConfigSpec.Builder BUILDER = new ConfigSpec.Builder();
 
     public static final ConfigSpec.DoubleValue JUMPSCARE_ENDS_AT = BUILDER
@@ -39,6 +40,6 @@ public final class ClientConfig {
             .define("spawn.biomeWhitelist", "");
     public static final ConfigSpec SPEC = BUILDER.build();
 
-    private ClientConfig() {
+    private RansomwareConfig() {
     }
 }

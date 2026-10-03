@@ -28,7 +28,7 @@ public final class FabricHooks {
                 if(previous!=null && !previous.equals(player.level().dimension()))
                     WormInfection.dimension(new PlayerEvent.PlayerChangedDimensionEvent(player));
                 var event=new PlayerTickEvent.Post(player);
-                RansomServerState.keepMainHandEmpty(event); WormInfection.tick(event);
+                RansomServerState.naturalSpawnTick(event); RansomServerState.keepMainHandEmpty(event); WormInfection.tick(event);
             }
         });
         ServerEntityEvents.ENTITY_LOAD.register((entity,level) -> {

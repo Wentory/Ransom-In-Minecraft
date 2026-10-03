@@ -23,7 +23,8 @@
     "InfectedZombieModelMixin",
     "HijackedDrownedModelMixin",
     "InfectedCreeperModelMixin",
-    "RenderStateEntityMixin"
+    "RenderStateEntityMixin",
+    "SceneCarriedItemMixin"
   ],
   "injectors": {
     "defaultRequire": 1

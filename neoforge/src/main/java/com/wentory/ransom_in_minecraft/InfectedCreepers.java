@@ -66,7 +66,7 @@ public final class InfectedCreepers {
     }
 
     private static void sync(Creeper creeper) {
-        PacketDistributor.sendToPlayersTrackingEntityAndSelf(creeper,
+        com.wentory.ransom_in_minecraft.network.RansomPackets.sendToPlayersTrackingEntityAndSelf(creeper,
                 new WormCreeperPayload(creeper.getUUID(), phase(creeper)));
     }
 
@@ -76,6 +76,7 @@ public final class InfectedCreepers {
     }
 
     @SubscribeEvent public static void join(EntityJoinLevelEvent event) {
+        if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(event.getEntity().level().getServer())) return;
         if (!event.getLevel().isClientSide() && event.getEntity() instanceof Creeper creeper && isInfected(creeper)) {
             creeper.getPersistentData().putInt(PHASE, 0);
             creeper.setNoGravity(false);
@@ -86,11 +87,12 @@ public final class InfectedCreepers {
     @SubscribeEvent public static void tracking(PlayerEvent.StartTracking event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         if (event.getTarget() instanceof Creeper creeper && isInfected(creeper)) {
-            PacketDistributor.sendToPlayer(player, new WormCreeperPayload(creeper.getUUID(), phase(creeper)));
+            com.wentory.ransom_in_minecraft.network.RansomPackets.sendToPlayer(player, new WormCreeperPayload(creeper.getUUID(), phase(creeper)));
         }
     }
 
     @SubscribeEvent public static void tick(EntityTickEvent.Post event) {
+        if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(event.getEntity().level().getServer())) return;
         if (event.getEntity().level().isClientSide()) return;
         if (!(event.getEntity() instanceof Creeper creeper) || !creeper.isAlive() || !isInfected(creeper)) return;
         if (InfectedZombies.isBeingInfected(creeper)) return;
@@ -219,7 +221,7 @@ public final class InfectedCreepers {
             if (mob instanceof Zombie zombie && InfectedZombies.isSupportedZombie(zombie)) InfectedZombies.infect(zombie);
             else if (mob instanceof Creeper other) infect(other);
         }
-        PacketDistributor.sendToPlayersInDimension(serverLevel, new WormCloudPayload(
+        com.wentory.ransom_in_minecraft.network.RansomPackets.sendToPlayersInDimension(serverLevel, new WormCloudPayload(
                 level.dimension().identifier().toString(), position.x, position.y, position.z, 12));
         creeper.discard();
     }

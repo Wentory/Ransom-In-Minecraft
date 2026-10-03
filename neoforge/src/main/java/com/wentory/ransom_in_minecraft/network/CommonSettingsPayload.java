@@ -42,6 +42,6 @@ public record CommonSettingsPayload(boolean stealer, int chestChance, boolean hi
                 StealerConfig.HIJACK_CREEPER_CHANCE.get());
     }
     @SubscribeEvent public static void login(PlayerEvent.PlayerLoggedInEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) PacketDistributor.sendToPlayer(player, current());
+        if (event.getEntity() instanceof ServerPlayer player) com.wentory.ransom_in_minecraft.network.RansomPackets.sendToPlayer(player, current());
     }
 }

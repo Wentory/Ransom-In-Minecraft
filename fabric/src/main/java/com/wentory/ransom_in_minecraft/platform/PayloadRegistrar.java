@@ -23,8 +23,7 @@ public final class PayloadRegistrar {
     public <T extends CustomPacketPayload> void playToClient(CustomPacketPayload.Type<T> type,
             StreamCodec<? super RegistryFriendlyByteBuf,T> codec,BiConsumer<T,Context> handler) {
         PayloadTypeRegistry.clientboundPlay().register(type,codec);
-        CLIENT_RECEIVERS.add(() -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(type,
-                (payload,context) -> handler.accept(payload,new Context(context.player(),context.client()))));
+        CLIENT_RECEIVERS.add(() -> ClientPayloadReceivers.register(type, handler));
     }
     public static void registerClientReceivers() { CLIENT_RECEIVERS.forEach(Runnable::run); }
 }

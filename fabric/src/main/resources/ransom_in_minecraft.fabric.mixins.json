@@ -19,7 +19,8 @@
     "FabricLivingLifecycleMixin",
     "FabricEntityTickMixin",
     "FabricChestRemovalMixin",
-    "FabricChunkTrackingMixin"
+    "FabricChunkTrackingMixin",
+    "StealerAirMixin"
   ],
   "client": [
     "ItemInHandRendererInvoker",
@@ -36,7 +37,8 @@
     "FabricLivingRenderMixin",
     "FabricHudMixin",
     "FabricInteractionMixin",
-    "GuiGraphicsStateAccessor"
+    "GuiGraphicsStateAccessor",
+    "SceneCarriedItemMixin"
   ],
   "injectors": {
     "defaultRequire": 1

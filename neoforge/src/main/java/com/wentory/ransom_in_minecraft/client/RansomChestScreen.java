@@ -150,7 +150,6 @@ public final class RansomChestScreen extends ContainerScreen {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.gui.screen() instanceof RansomChestScreen) minecraft.setScreenAndShow(null);
         active = null;
-        RansomEncounter.refreshNaturalSpawnTimer();
     }
 
     public static boolean isActive() {
@@ -483,7 +482,6 @@ public final class RansomChestScreen extends ContainerScreen {
         stopInterruptedJumpscare();
         stopEndingLaugh();
         active = null;
-        RansomEncounter.refreshNaturalSpawnTimer();
         super.onClose();
     }
 
@@ -496,7 +494,6 @@ public final class RansomChestScreen extends ContainerScreen {
         super.removed();
         if (active == this) {
             active = null;
-            RansomEncounter.refreshNaturalSpawnTimer();
         }
     }
 

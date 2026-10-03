@@ -11,7 +11,7 @@ import net.minecraft.world.entity.Entity;
 public final class FabricNetwork {
     static net.minecraft.server.MinecraftServer server;
     public static void sendToServer(CustomPacketPayload payload) { ClientPlayNetworking.send(payload); }
-    public static void sendToPlayer(ServerPlayer player,CustomPacketPayload payload) { ServerPlayNetworking.send(player,payload); }
+    public static void sendToPlayer(ServerPlayer player,CustomPacketPayload payload) { if (!com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(player.level().getServer()) && ServerPlayNetworking.canSend(player,payload.type())) ServerPlayNetworking.send(player,payload); }
     public static void sendToAllPlayers(CustomPacketPayload payload) {
         if (server != null) for (ServerPlayer player:server.getPlayerList().getPlayers()) sendToPlayer(player,payload);
     }
