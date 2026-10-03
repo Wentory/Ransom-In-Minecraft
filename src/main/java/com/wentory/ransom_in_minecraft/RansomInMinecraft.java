@@ -61,7 +61,17 @@ public class RansomInMinecraft {
         IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
         SOUNDS.register(modBus);
         RansomNetwork.register();
-        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
+        try {
+            var dir = net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get();
+            var oldConfig = dir.resolve("ransom_in_minecraft-client.toml");
+            var newConfig = dir.resolve("ransom_in_minecraft-ransomware.toml");
+            if (java.nio.file.Files.exists(oldConfig) && !java.nio.file.Files.exists(newConfig))
+                java.nio.file.Files.copy(oldConfig, newConfig);
+        } catch (java.io.IOException exception) {
+            throw new java.io.UncheckedIOException(exception);
+        }
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, RansomwareConfig.SPEC,
+                "ransom_in_minecraft-ransomware.toml");
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, StealerConfig.SPEC);
         if (FMLEnvironment.dist == Dist.CLIENT) {
             RansomClientSetup.registerConfigScreen();

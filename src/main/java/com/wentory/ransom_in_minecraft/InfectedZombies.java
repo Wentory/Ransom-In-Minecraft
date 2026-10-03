@@ -119,6 +119,7 @@ public final class InfectedZombies {
 
     @SubscribeEvent
     public static void onJoin(EntityJoinLevelEvent event) {
+        if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(event.getLevel().getServer())) return;
         if (event.getLevel().isClientSide() || !(event.getEntity() instanceof Mob mob)) return;
         if (isBeingInfected(mob)) releaseVictim(mob);
         if (!(mob instanceof Zombie zombie)) return;
@@ -157,6 +158,7 @@ public final class InfectedZombies {
 
     @SubscribeEvent
     public static void onTick(LivingTickEvent event) {
+        if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(event.getEntity().getServer())) return;
         if (!(event.getEntity() instanceof Mob mob) || mob.level().isClientSide()) return;
         if (isBeingInfected(mob)) {
             tickVictim(mob);

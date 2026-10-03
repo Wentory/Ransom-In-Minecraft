@@ -2,6 +2,7 @@ package com.wentory.ransom_in_minecraft.network;
 
 import com.wentory.ransom_in_minecraft.RansomInMinecraft;
 import com.wentory.ransom_in_minecraft.StealerConfig;
+import com.wentory.ransom_in_minecraft.RansomwareConfig;
 import com.wentory.ransom_in_minecraft.InfectedZombies;
 import com.wentory.ransom_in_minecraft.InfectedCreepers;
 import com.wentory.ransom_in_minecraft.WormInfection;
@@ -50,6 +51,7 @@ public final class RansomServerState {
     private static final int ALL_MAIN_INVENTORY_SLOTS = (1 << 27) - 1;
     private static final Map<UUID, LockedInventory> LOCKED_PLAYERS = new HashMap<>();
     private static final Map<UUID, Long> LAST_GLITCH_HIT = new HashMap<>();
+    private static final Map<UUID, Integer> NATURAL_SPAWN_TIMERS = new HashMap<>();
 
     private RansomServerState() {}
 
@@ -60,6 +62,29 @@ public final class RansomServerState {
     public static void registerPayloads(PayloadRegistrar registrar) {
         registrar.playToClient(CommonSettingsPayload.TYPE, CommonSettingsPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(payload::accept));
+        registrar.playToClient(RansomwareSyncPayload.TYPE, RansomwareSyncPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(payload::accept));
+        registrar.playToServer(RansomwareSettingsPayload.TYPE, RansomwareSettingsPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (!(context.player() instanceof ServerPlayer player)
+                            || !player.hasPermissions(2)
+                            && !player.getServer().isSingleplayerOwner(player.getGameProfile())) return;
+                    RansomwareConfig.JUMPSCARE_ENDS_AT.set(net.minecraft.util.Mth.clamp(payload.jumpscareEnd(), 0.05, 30.0));
+                    RansomwareConfig.DOWNLOAD_STARTS_AT.set(net.minecraft.util.Mth.clamp(payload.downloadStart(), 0.0, 30.0));
+                    RansomwareConfig.DOWNLOAD_ENDS_AT.set(net.minecraft.util.Mth.clamp(payload.downloadEnd(), 0.05, 30.0));
+                    RansomwareConfig.DELETE_HOTBAR_ON_FAILURE.set(payload.deleteItems());
+                    RansomwareConfig.INFECTION_VERTICAL_BELOW.set(net.minecraft.util.Mth.clamp(payload.below(), 0, 128));
+                    RansomwareConfig.INFECTION_VERTICAL_ABOVE.set(net.minecraft.util.Mth.clamp(payload.above(), 0, 128));
+                    RansomwareConfig.INFECTION_RADIUS.set(net.minecraft.util.Mth.clamp(payload.radius(), 8, 256));
+                    int minimum = net.minecraft.util.Mth.clamp(payload.spawnMin(), 1, 86400);
+                    RansomwareConfig.NATURAL_SPAWN_MIN_SECONDS.set(minimum);
+                    RansomwareConfig.NATURAL_SPAWN_MAX_SECONDS.set(net.minecraft.util.Mth.clamp(payload.spawnMax(), minimum, 86400));
+                    RansomwareConfig.BIOME_WHITELIST_ENABLED.set(payload.biomeWhitelistEnabled());
+                    RansomwareConfig.BIOME_WHITELIST.set(payload.biomeWhitelist());
+                    RansomwareConfig.SPEC.save();
+                    NATURAL_SPAWN_TIMERS.clear();
+                    PacketDistributor.sendToAllPlayers(RansomwareSyncPayload.current());
+                }));
         registrar.playToClient(WormInfectionPayload.TYPE, WormInfectionPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> WormEffects.accept(payload.value())));
         registrar.playToServer(WormSettingsPayload.TYPE, WormSettingsPayload.STREAM_CODEC, (payload, context) -> {
@@ -89,7 +114,7 @@ public final class RansomServerState {
                 (payload, context) -> {
                     if (!(context.player() instanceof ServerPlayer player)) return;
                     if (payload.penaltyDamage() > 0) damage(player, payload.penaltyDamage(), payload.coins());
-                    else if (payload.failure()) fail(player, payload.coins(), payload.deleteHotbar());
+                    else if (payload.failure()) fail(player, payload.coins(), RansomwareConfig.DELETE_HOTBAR_ON_FAILURE.get());
                     else if (payload.active()) lockHands(player);
                     else unlockHands(player);
                 });
@@ -115,7 +140,7 @@ public final class RansomServerState {
                 (payload, context) -> {
                     if (!(context.player() instanceof ServerPlayer player)) return;
                     player.getPersistentData().putBoolean(FAILURE_ARMED, true);
-                    player.getPersistentData().putBoolean(FAILURE_DELETE_HOTBAR, payload.deleteHotbar());
+                    player.getPersistentData().putBoolean(FAILURE_DELETE_HOTBAR, RansomwareConfig.DELETE_HOTBAR_ON_FAILURE.get());
                     player.getPersistentData().putInt(COINS, Math.max(0, payload.coins()));
                 });
         registrar.playToClient(RansomFailureScarePayload.TYPE, RansomFailureScarePayload.STREAM_CODEC,
@@ -249,9 +274,51 @@ public final class RansomServerState {
 
     @SubscribeEvent
     public static void keepMainHandEmpty(PlayerTickEvent event) {
+        if (ReplayCompatibility.isReplayServer(event.player.getServer())) return;
         if (event.phase != net.minecraftforge.event.TickEvent.Phase.END || !(event.player instanceof ServerPlayer player)
                 || !LOCKED_PLAYERS.containsKey(player.getUUID())) return;
         player.getInventory().selected = Inventory.getSelectionSize();
+    }
+
+    @SubscribeEvent
+    public static void naturalSpawnTick(PlayerTickEvent event) {
+        if (ReplayCompatibility.isReplayServer(event.player.getServer())) return;
+        if (event.phase != net.minecraftforge.event.TickEvent.Phase.END || !(event.player instanceof ServerPlayer player)) return;
+        UUID id = player.getUUID();
+        if (!player.isAlive() || player.getPersistentData().getBoolean(NATURAL_SPAWN_DISABLED)
+                || isEncounterActive(player) || RansomChestGame.hasActiveGame(player)) {
+            NATURAL_SPAWN_TIMERS.remove(id);
+            return;
+        }
+        int remaining = NATURAL_SPAWN_TIMERS.computeIfAbsent(id, ignored -> randomNaturalSpawnDelayTicks()) - 1;
+        if (remaining > 0) {
+            NATURAL_SPAWN_TIMERS.put(id, remaining);
+            return;
+        }
+        if (!naturalSpawnAllowedInCurrentBiome(player)) {
+            NATURAL_SPAWN_TIMERS.put(id, 20);
+            return;
+        }
+        NATURAL_SPAWN_TIMERS.put(id, randomNaturalSpawnDelayTicks());
+        summonRansom(player);
+    }
+
+    private static int randomNaturalSpawnDelayTicks() {
+        int minimum = RansomwareConfig.NATURAL_SPAWN_MIN_SECONDS.get();
+        int maximum = Math.max(minimum, RansomwareConfig.NATURAL_SPAWN_MAX_SECONDS.get());
+        int seconds = java.util.concurrent.ThreadLocalRandom.current().nextInt(minimum, maximum + 1);
+        return seconds * 20;
+    }
+
+    private static boolean naturalSpawnAllowedInCurrentBiome(ServerPlayer player) {
+        if (!RansomwareConfig.BIOME_WHITELIST_ENABLED.get()) return true;
+        var biomeKey = player.serverLevel().getBiome(player.blockPosition()).unwrapKey();
+        if (biomeKey.isEmpty()) return false;
+        String currentBiome = biomeKey.get().location().toString();
+        for (String configuredBiome : RansomwareConfig.BIOME_WHITELIST.get().split(",")) {
+            if (currentBiome.equals(configuredBiome.trim())) return true;
+        }
+        return false;
     }
 
     @SubscribeEvent
@@ -275,6 +342,7 @@ public final class RansomServerState {
 
     @SubscribeEvent
     public static void playerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        NATURAL_SPAWN_TIMERS.remove(event.getEntity().getUUID());
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         LAST_GLITCH_HIT.remove(player.getUUID());
         if (player.getPersistentData().getBoolean(FAILURE_ARMED)) {
@@ -290,6 +358,8 @@ public final class RansomServerState {
     @SubscribeEvent
     public static void playerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer joining)) return;
+        if (ReplayCompatibility.isReplayServer(joining.getServer())) return;
+        PacketDistributor.sendToPlayer(joining, RansomwareSyncPayload.current());
         syncNaturalSpawnState(joining);
         syncEncryptedSlots(joining, false);
         for (UUID infected : LOCKED_PLAYERS.keySet()) {

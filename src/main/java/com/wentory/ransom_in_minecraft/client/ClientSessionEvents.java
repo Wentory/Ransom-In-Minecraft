@@ -20,6 +20,7 @@ public final class ClientSessionEvents {
 
     @SubscribeEvent
     public static void loggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        com.wentory.ransom_in_minecraft.network.RansomwareSyncPayload.clear();
         RansomEncounter.handleDisconnect(Minecraft.getInstance());
         ClientRansomResumeTracker.clear();
         ClientInfectionTracker.clear();

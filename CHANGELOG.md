@@ -1,19 +1,14 @@
 # Changelog
 
-## 1.0.1
+## 1.1.1
 
-- Fixed infected block overlays disappearing when Sodium is installed.
-- Fixed infected block overlays rendering through terrain or at incorrect positions without Sodium.
-- Improved compatibility with shader rendering by using a dedicated depth-aware overlay layer.
-- Fixed saved encounters carrying over into newly created or unrelated worlds.
-- Encounters and pending punishments now resume only in the world where they were started.
-- Added the in-game project icon.
+### Fixed
 
-## 1.0.0
+- Fixed a crash when starting a dedicated server.
+- Fixed Flashback replay playback compatibility.
+- Fixed Ransomware settings being controlled by the client instead of the server. Server settings now apply to all players.
 
-- Initial release.
-- Added natural Ransom encounters with the STOP reaction sequence.
-- Added jumpscares, a timed debt challenge, infected blocks, and coin collection.
-- Added hotbar encryption and configurable item deletion after failure.
-- Added penalties for leaving the game area, dying, and disconnecting.
-- Added multiplayer infection visuals and an in-game configuration screen.
+### Balance
+
+- Ransom: Stealer now preserves your current air supply while its interface is open underwater. Closing the interface resumes normal air consumption, even while the mini-game continues.
+- Ransomware encounters now end without taking items when the player is underwater or water is within two blocks above their head. Ransom floats away with bubbles and a bwomp instead of starting the coin collection game.

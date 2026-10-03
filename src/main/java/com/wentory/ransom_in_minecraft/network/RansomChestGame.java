@@ -56,6 +56,10 @@ public final class RansomChestGame {
     private static final String OWNER = "ransom_infected_owner";
     private static final String SESSION = "ransom_chest_session";
     private static final Map<UUID, Session> SESSIONS = new HashMap<>();
+
+    public static boolean hasActiveGame(ServerPlayer player) {
+        return SESSIONS.containsKey(player.getUUID());
+    }
     private static final List<PendingHit> PENDING_HITS = new ArrayList<>();
     private static final List<PendingLidClose> PENDING_LIDS = new ArrayList<>();
     private static final String[] KEYS = {"A", "S", "D", "F", "G", "H", "J", "K", "L", "W", "E", "R"};
@@ -335,6 +339,18 @@ public final class RansomChestGame {
         finishSession(session, player);
     }
 
+    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.LOWEST)
+    public static void preserveStealerAir(net.minecraftforge.event.entity.living.LivingBreatheEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || !player.isAlive()
+                || !player.isUnderWater() || !(player.containerMenu instanceof SealedChestMenu)
+                || ReplayCompatibility.isReplayServer(player.getServer())) return;
+        Session session = SESSIONS.get(player.getUUID());
+        if (session == null || session.level != player.serverLevel() || !StealerConfig.ENABLED.get()) return;
+        event.setCanBreathe(true);
+        event.setConsumeAirAmount(0);
+        event.setRefillAirAmount(0);
+    }
+
     @SubscribeEvent
     public static void logout(PlayerEvent.PlayerLoggedOutEvent event) {
         Session session = SESSIONS.get(event.getEntity().getUUID());
@@ -343,6 +359,7 @@ public final class RansomChestGame {
 
     @SubscribeEvent
     public static void tick(ServerTickEvent event) {
+        if (ReplayCompatibility.isReplayServer(event.getServer())) return;
         if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) return;
         if (event.getServer().getTickCount() % 5 != 0) return;
         if (!StealerConfig.ENABLED.get()) {

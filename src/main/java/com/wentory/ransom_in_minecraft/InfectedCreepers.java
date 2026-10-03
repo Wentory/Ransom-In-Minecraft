@@ -76,6 +76,7 @@ public final class InfectedCreepers {
     }
 
     @SubscribeEvent public static void join(EntityJoinLevelEvent event) {
+        if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(event.getLevel().getServer())) return;
         if (!event.getLevel().isClientSide() && event.getEntity() instanceof Creeper creeper && isInfected(creeper)) {
             creeper.getPersistentData().putInt(PHASE, 0);
             creeper.setNoGravity(false);
@@ -91,6 +92,7 @@ public final class InfectedCreepers {
     }
 
     @SubscribeEvent public static void tick(LivingTickEvent event) {
+        if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(event.getEntity().getServer())) return;
         if (event.getEntity().level().isClientSide()) return;
         if (!(event.getEntity() instanceof Creeper creeper) || !creeper.isAlive() || !isInfected(creeper)) return;
         if (InfectedZombies.isBeingInfected(creeper)) return;

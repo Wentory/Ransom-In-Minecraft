@@ -22,7 +22,8 @@
     "SoundEngineAccessor",
     "InfectedZombieModelMixin",
     "HijackedDrownedModelMixin",
-    "InfectedCreeperModelMixin"
+    "InfectedCreeperModelMixin",
+    "SceneCarriedItemMixin"
   ],
   "injectors": {
     "defaultRequire": 1

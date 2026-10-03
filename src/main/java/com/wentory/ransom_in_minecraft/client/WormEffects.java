@@ -57,6 +57,10 @@ public final class WormEffects {
     @SubscribeEvent public static void tick(ClientTickEvent event) {
         if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
+        if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(mc.getSingleplayerServer())) {
+            releaseMovement();
+            return;
+        }
         if (mc.isPaused()) return;
         tick++;
         if (value < 75 || mc.player == null || !mc.player.isAlive() || mc.screen != null) {
