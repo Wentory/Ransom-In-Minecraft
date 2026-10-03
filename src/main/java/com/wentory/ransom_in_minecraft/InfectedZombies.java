@@ -1,5 +1,7 @@
 package com.wentory.ransom_in_minecraft;
 
+import com.wentory.ransom_in_minecraft.network.RansomPackets;
+
 import com.wentory.ransom_in_minecraft.network.InfectedZombiePayload;
 import com.wentory.ransom_in_minecraft.network.WormVictimPayload;
 import com.wentory.ransom_in_minecraft.network.ZombieStopPayload;
@@ -33,7 +35,6 @@ import net.neoforged.neoforge.event.entity.living.FinalizeSpawnEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.Comparator;
 import java.util.UUID;
@@ -74,7 +75,7 @@ public final class InfectedZombies {
         releaseVictim(zombie);
         zombie.getPersistentData().putBoolean(INFECTED, true);
         configureInfected(zombie);
-        PacketDistributor.sendToPlayersTrackingEntityAndSelf(zombie, new InfectedZombiePayload(zombie.getUUID()));
+        RansomPackets.sendToPlayersTrackingEntityAndSelf(zombie, new InfectedZombiePayload(zombie.getUUID()));
     }
 
     public static boolean isSupportedZombie(Mob mob) {
@@ -119,6 +120,7 @@ public final class InfectedZombies {
 
     @SubscribeEvent
     public static void onJoin(EntityJoinLevelEvent event) {
+        if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(event.getLevel().getServer())) return;
         if (event.getLevel().isClientSide() || !(event.getEntity() instanceof Mob mob)) return;
         if (isBeingInfected(mob)) releaseVictim(mob);
         if (!(mob instanceof Zombie zombie)) return;
@@ -151,16 +153,17 @@ public final class InfectedZombies {
     public static void onStartTracking(PlayerEvent.StartTracking event) {
         if (!(event.getEntity() instanceof ServerPlayer player)
                 || !(event.getTarget() instanceof Mob mob)) return;
-        if (mob instanceof Zombie zombie && isInfected(zombie)) PacketDistributor.sendToPlayer(player, new InfectedZombiePayload(zombie.getUUID()));
+        if (mob instanceof Zombie zombie && isInfected(zombie)) RansomPackets.sendToPlayer(player, new InfectedZombiePayload(zombie.getUUID()));
         long remaining = mob.getPersistentData().getLong(STOP_END) - mob.level().getGameTime();
-        if (remaining > 0) PacketDistributor.sendToPlayer(player, new ZombieStopPayload(mob.getUUID(), (int) remaining));
+        if (remaining > 0) RansomPackets.sendToPlayer(player, new ZombieStopPayload(mob.getUUID(), (int) remaining));
         if (isBeingInfected(mob)) {
-            PacketDistributor.sendToPlayer(player, new WormVictimPayload(mob.getUUID(), true));
+            RansomPackets.sendToPlayer(player, new WormVictimPayload(mob.getUUID(), true));
         }
     }
 
     @SubscribeEvent
     public static void onTick(EntityTickEvent.Post event) {
+        if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(event.getEntity().getServer())) return;
         if (!(event.getEntity() instanceof Mob mob) || mob.level().isClientSide()) return;
         if (isBeingInfected(mob)) {
             tickVictim(mob);
@@ -288,7 +291,7 @@ public final class InfectedZombies {
         victim.getPersistentData().putBoolean(WORM_PREVIOUS_AI, victim.isNoAi());
         victim.getPersistentData().putUUID(WORM_SOURCE, worm.getUUID());
         victim.setNoAi(true);
-        PacketDistributor.sendToPlayersTrackingEntityAndSelf(victim,
+        RansomPackets.sendToPlayersTrackingEntityAndSelf(victim,
                 new WormVictimPayload(victim.getUUID(), true));
     }
 
@@ -328,7 +331,7 @@ public final class InfectedZombies {
         victim.setNoAi(victim.getPersistentData().getBoolean(WORM_PREVIOUS_AI));
         victim.getPersistentData().remove(WORM_SOURCE);
         victim.getPersistentData().remove(WORM_PREVIOUS_AI);
-        PacketDistributor.sendToPlayersTrackingEntityAndSelf(victim,
+        RansomPackets.sendToPlayersTrackingEntityAndSelf(victim,
                 new WormVictimPayload(victim.getUUID(), false));
     }
 
@@ -364,7 +367,7 @@ public final class InfectedZombies {
         zombie.getPersistentData().putLong(STOP_END, now + duration);
         zombie.getPersistentData().putLong(NEXT_STOP, now + duration + 80 + zombie.getRandom().nextInt(81));
         freezeMovement(zombie);
-        PacketDistributor.sendToPlayersTrackingEntityAndSelf(zombie, new ZombieStopPayload(zombie.getUUID(), duration));
+        RansomPackets.sendToPlayersTrackingEntityAndSelf(zombie, new ZombieStopPayload(zombie.getUUID(), duration));
         zombie.level().playSound(null, zombie.getX(), zombie.getY(), zombie.getZ(),
                 RansomInMinecraft.ZOMBIE_STOP.get(), SoundSource.HOSTILE, 1.0F, soundPitch(zombie));
     }

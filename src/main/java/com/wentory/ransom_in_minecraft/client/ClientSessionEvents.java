@@ -6,6 +6,7 @@ import com.wentory.ransom_in_minecraft.network.ClientInfectedZombies;
 import com.wentory.ransom_in_minecraft.network.ClientPlayerGlitchTracker;
 import com.wentory.ransom_in_minecraft.network.ClientPlayerVisualEffectTracker;
 import com.wentory.ransom_in_minecraft.network.ClientRansomResumeTracker;
+import com.wentory.ransom_in_minecraft.network.RansomwareSyncPayload;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -20,6 +21,7 @@ public final class ClientSessionEvents {
 
     @SubscribeEvent
     public static void loggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        RansomwareSyncPayload.clear();
         RansomEncounter.handleDisconnect(Minecraft.getInstance());
         ClientRansomResumeTracker.clear();
         ClientInfectionTracker.clear();

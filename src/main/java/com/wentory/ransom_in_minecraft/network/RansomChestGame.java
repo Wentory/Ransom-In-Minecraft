@@ -37,7 +37,6 @@ import net.neoforged.neoforge.event.level.ChunkWatchEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.level.ExplosionEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -56,6 +55,10 @@ public final class RansomChestGame {
     private static final String OWNER = "ransom_infected_owner";
     private static final String SESSION = "ransom_chest_session";
     private static final Map<UUID, Session> SESSIONS = new HashMap<>();
+
+    public static boolean hasActiveGame(ServerPlayer player) {
+        return SESSIONS.containsKey(player.getUUID());
+    }
     private static final List<PendingHit> PENDING_HITS = new ArrayList<>();
     private static final List<PendingLidClose> PENDING_LIDS = new ArrayList<>();
     private static final String[] KEYS = {"A", "S", "D", "F", "G", "H", "J", "K", "L", "W", "E", "R"};
@@ -180,7 +183,7 @@ public final class RansomChestGame {
                 new SealedChestMenu(id, inventory, rows),
                 rows == 6 ? Component.translatable("container.chestDouble")
                         : Component.translatable("container.chest")));
-        PacketDistributor.sendToPlayer(player, new ChestQteStartPayload(session.id, session.pos.asLong(),
+        RansomPackets.sendToPlayer(player, new ChestQteStartPayload(session.id, session.pos.asLong(),
                 session.round + 1, session.groups.size(), session.sequence, session.keyIndex,
                 resumed ? Math.max(0L, session.deadlineMillis - System.currentTimeMillis()
                         - latencyGraceMillis(player))
@@ -210,7 +213,7 @@ public final class RansomChestGame {
         } else {
             lostItem = BuiltInRegistries.ITEM.getKey(group.item).toString();
             lostCount = removeItem(session.chests, group.item);
-            PacketDistributor.sendToAllPlayers(new ChestLostItemPayload(
+            RansomPackets.sendToAllPlayers(new ChestLostItemPayload(
                     session.level.dimension().location().toString(), session.pos.asLong(), lostItem));
             openChestLid(session, now, 1500L);
         }
@@ -238,7 +241,7 @@ public final class RansomChestGame {
         }
         saveSession(session);
         if (player != null && player.containerMenu instanceof SealedChestMenu) {
-            PacketDistributor.sendToPlayer(player, new ChestQteAdvancePayload(session.id, success,
+            RansomPackets.sendToPlayer(player, new ChestQteAdvancePayload(session.id, success,
                     lostItem, lostCount, session.round + 1, session.groups.size(), next, outcome,
                     next.isEmpty() ? 0L : timeForRound(sequenceLength(next)) * 50L));
         }
@@ -342,8 +345,21 @@ public final class RansomChestGame {
         if (session != null) saveSession(session);
     }
 
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
+    public static void preserveStealerAir(net.neoforged.neoforge.event.entity.living.LivingBreatheEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || !player.isAlive()
+                || !player.isUnderWater() || !(player.containerMenu instanceof SealedChestMenu)
+                || ReplayCompatibility.isReplayServer(player.server)) return;
+        Session session = SESSIONS.get(player.getUUID());
+        if (session == null || session.level != player.serverLevel() || !StealerConfig.ENABLED.get()) return;
+        event.setCanBreathe(true);
+        event.setConsumeAirAmount(0);
+        event.setRefillAirAmount(0);
+    }
+
     @SubscribeEvent
     public static void tick(ServerTickEvent.Post event) {
+        if (ReplayCompatibility.isReplayServer(event.getServer())) return;
         if (event.getServer().getTickCount() % 5 != 0) return;
         if (!StealerConfig.ENABLED.get()) {
             for (Session session : List.copyOf(SESSIONS.values())) {
@@ -356,7 +372,7 @@ public final class RansomChestGame {
             if (now < hit.whenMillis()) continue;
             ServerPlayer target = event.getServer().getPlayerList().getPlayer(hit.player());
             if (target != null && target.serverLevel() == hit.level())
-                PacketDistributor.sendToPlayer(target, new RansomForcedAttackPayload(true));
+                RansomPackets.sendToPlayer(target, new RansomForcedAttackPayload(true));
             iterator.remove();
         }
         for (var iterator = PENDING_LIDS.iterator(); iterator.hasNext();) {
@@ -392,7 +408,7 @@ public final class RansomChestGame {
                     if (session != null) advanceExpired(session, System.currentTimeMillis());
                 }
                 if (!isInfected(chest)) continue;
-                PacketDistributor.sendToPlayer(event.getPlayer(), new ChestInfectionPayload(
+                RansomPackets.sendToPlayer(event.getPlayer(), new ChestInfectionPayload(
                         event.getLevel().dimension().location().toString(), chest.getBlockPos().asLong(), true));
             }
         }
@@ -402,7 +418,7 @@ public final class RansomChestGame {
     public static void breakInfectedChest(BlockEvent.BreakEvent event) {
         if (!event.isCanceled() && event.getLevel() instanceof ServerLevel level) {
             ServerPlayer nearest = destroyInfectedChest(level, event.getPos());
-            if (nearest != null) PacketDistributor.sendToPlayer(nearest, new RansomForcedAttackPayload(true));
+            if (nearest != null) RansomPackets.sendToPlayer(nearest, new RansomForcedAttackPayload(true));
         }
     }
 
@@ -413,7 +429,7 @@ public final class RansomChestGame {
         for (BlockPos pos : event.getAffectedBlocks()) {
             ServerPlayer nearest = destroyInfectedChest(level, pos);
             if (nearest != null && attacked.add(nearest.getUUID()))
-                PacketDistributor.sendToPlayer(nearest, new RansomForcedAttackPayload(true));
+                RansomPackets.sendToPlayer(nearest, new RansomForcedAttackPayload(true));
         }
     }
 
@@ -447,7 +463,7 @@ public final class RansomChestGame {
     private static void abortSession(Session session) {
         ServerPlayer participant = session.level.getServer().getPlayerList().getPlayer(session.player);
         if (participant != null) {
-            PacketDistributor.sendToPlayer(participant, new ChestQteAbortPayload(session.id));
+            RansomPackets.sendToPlayer(participant, new ChestQteAbortPayload(session.id));
             participant.closeContainer();
         }
         SESSIONS.remove(session.player, session);
@@ -572,7 +588,7 @@ public final class RansomChestGame {
             if (target != null) PENDING_HITS.add(new PendingHit(session.level, target.getUUID(),
                     System.currentTimeMillis() + 1100L));
         }
-        PacketDistributor.sendToAllPlayers(new ChestOutcomePayload(
+        RansomPackets.sendToAllPlayers(new ChestOutcomePayload(
                 session.level.dimension().location().toString(), session.pos.asLong(),
                 session.finalOutcome, target == null ? -1 : target.getId()));
         if (player != null && player.containerMenu instanceof SealedChestMenu) {
@@ -643,7 +659,7 @@ public final class RansomChestGame {
     }
 
     private static void broadcast(ServerLevel level, BlockPos pos, boolean infected) {
-        PacketDistributor.sendToAllPlayers(new ChestInfectionPayload(level.dimension().location().toString(),
+        RansomPackets.sendToAllPlayers(new ChestInfectionPayload(level.dimension().location().toString(),
                 pos.asLong(), infected));
     }
 

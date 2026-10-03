@@ -1,7 +1,9 @@
 package com.wentory.ransom_in_minecraft.client;
 
-import com.wentory.ransom_in_minecraft.ClientConfig;
+import com.wentory.ransom_in_minecraft.RansomwareConfig;
 import com.wentory.ransom_in_minecraft.StealerConfig;
+import com.wentory.ransom_in_minecraft.network.RansomwareSettingsPayload;
+import com.wentory.ransom_in_minecraft.network.RansomwareSyncPayload;
 import com.wentory.ransom_in_minecraft.network.StealerSettingsPayload;
 import com.wentory.ransom_in_minecraft.network.WormSettingsPayload;
 import net.minecraft.client.gui.GuiGraphics;
@@ -22,6 +24,9 @@ public final class RansomConfigScreen extends Screen {
     private Button stealerButton;
     private boolean stealerEnabled;
     private boolean canEditStealer;
+    private boolean deleteItems;
+    private boolean biomeWhitelistEnabled;
+    private boolean resetRansomwareTiming;
     private EditBox belowField;
     private EditBox aboveField;
     private EditBox radiusField;
@@ -49,15 +54,20 @@ public final class RansomConfigScreen extends Screen {
     protected void init() {
         canEditStealer = minecraft.player == null
                 || minecraft.getSingleplayerServer() != null || minecraft.player.hasPermissions(2);
+        deleteItems = ransomValue(RansomwareConfig.DELETE_HOTBAR_ON_FAILURE);
+        biomeWhitelistEnabled = ransomValue(RansomwareConfig.BIOME_WHITELIST_ENABLED);
         stealerEnabled = serverValue(StealerConfig.ENABLED);
         wormEnabled = serverValue(StealerConfig.WORM_ENABLED);
         rows.clear();
         int fieldX = width / 2 + 42;
-        belowField = numberField(fieldX, 24, ClientConfig.INFECTION_VERTICAL_BELOW.get());
-        aboveField = numberField(fieldX, 42, ClientConfig.INFECTION_VERTICAL_ABOVE.get());
-        radiusField = numberField(fieldX, 60, ClientConfig.INFECTION_RADIUS.get());
-        spawnMinField = numberField(fieldX, 78, ClientConfig.NATURAL_SPAWN_MIN_SECONDS.get());
-        spawnMaxField = numberField(fieldX, 96, ClientConfig.NATURAL_SPAWN_MAX_SECONDS.get());
+        belowField = numberField(fieldX, 24, ransomValue(RansomwareConfig.INFECTION_VERTICAL_BELOW));
+        aboveField = numberField(fieldX, 42, ransomValue(RansomwareConfig.INFECTION_VERTICAL_ABOVE));
+        radiusField = numberField(fieldX, 60, ransomValue(RansomwareConfig.INFECTION_RADIUS));
+        spawnMinField = numberField(fieldX, 78, ransomValue(RansomwareConfig.NATURAL_SPAWN_MIN_SECONDS));
+        spawnMaxField = numberField(fieldX, 96, ransomValue(RansomwareConfig.NATURAL_SPAWN_MAX_SECONDS));
+        for (EditBox field : new EditBox[]{belowField, aboveField, radiusField, spawnMinField, spawnMaxField}) {
+            field.setEditable(canEditStealer);
+        }
 
         biomeWhitelistField = addRenderableWidget(new EditBox(font, width / 2 - 128, 151, 256, 18,
                 Component.literal("Biome whitelist")) {
@@ -71,16 +81,19 @@ public final class RansomConfigScreen extends Screen {
                 }
             }
         });
-        biomeWhitelistField.setValue(ClientConfig.BIOME_WHITELIST.get());
+        biomeWhitelistField.setValue(ransomValue(RansomwareConfig.BIOME_WHITELIST));
+        biomeWhitelistField.setEditable(canEditStealer);
 
         deletionButton = addRenderableWidget(Button.builder(deletionLabel(), button -> {
-            ClientConfig.DELETE_HOTBAR_ON_FAILURE.set(!ClientConfig.DELETE_HOTBAR_ON_FAILURE.get());
+            deleteItems = !deleteItems;
             button.setMessage(deletionLabel());
         }).bounds(width / 2 - 128, 117, 124, 18).build());
+        deletionButton.active = canEditStealer;
         biomeWhitelistButton = addRenderableWidget(Button.builder(biomeWhitelistLabel(), button -> {
-            ClientConfig.BIOME_WHITELIST_ENABLED.set(!ClientConfig.BIOME_WHITELIST_ENABLED.get());
+            biomeWhitelistEnabled = !biomeWhitelistEnabled;
             button.setMessage(biomeWhitelistLabel());
         }).bounds(width / 2 + 4, 117, 124, 18).build());
+        biomeWhitelistButton.active = canEditStealer;
         stealerButton = addRenderableWidget(Button.builder(stealerLabel(), button -> {
             stealerEnabled = !stealerEnabled;
             button.setMessage(stealerLabel());
@@ -118,6 +131,13 @@ public final class RansomConfigScreen extends Screen {
         }
         return StealerConfig.SPEC.isLoaded() ? value.get() : value.getDefault();
     }
+    private static <T> T ransomValue(net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<T> value) {
+        if (net.minecraft.client.Minecraft.getInstance().player != null
+                && net.minecraft.client.Minecraft.getInstance().getSingleplayerServer() == null) {
+            return RansomwareSyncPayload.value(value);
+        }
+        return RansomwareConfig.SPEC.isLoaded() ? value.get() : value.getDefault();
+    }
     private Component wormLabel() { return Component.literal("Ransom Hijack: " + (wormEnabled ? "ON" : "OFF")); }
 
     private void updateScroll() {
@@ -143,12 +163,12 @@ public final class RansomConfigScreen extends Screen {
 
     private Component deletionLabel() {
         return Component.literal("Delete items: "
-                + (ClientConfig.DELETE_HOTBAR_ON_FAILURE.get() ? "ON" : "OFF"));
+                + (deleteItems ? "ON" : "OFF"));
     }
 
     private Component biomeWhitelistLabel() {
         return Component.literal("Biome whitelist: "
-                + (ClientConfig.BIOME_WHITELIST_ENABLED.get() ? "ON" : "OFF"));
+                + (biomeWhitelistEnabled ? "ON" : "OFF"));
     }
 
     private Component stealerLabel() {
@@ -156,26 +176,19 @@ public final class RansomConfigScreen extends Screen {
     }
 
     private void resetDefaults() {
-        ClientConfig.JUMPSCARE_ENDS_AT.set(1.0);
-        ClientConfig.DOWNLOAD_STARTS_AT.set(1.0);
-        ClientConfig.DOWNLOAD_ENDS_AT.set(2.0);
-        ClientConfig.DELETE_HOTBAR_ON_FAILURE.set(true);
-        ClientConfig.INFECTION_VERTICAL_BELOW.set(5);
-        ClientConfig.INFECTION_VERTICAL_ABOVE.set(5);
-        ClientConfig.INFECTION_RADIUS.set(64);
-        ClientConfig.NATURAL_SPAWN_MIN_SECONDS.set(180);
-        ClientConfig.NATURAL_SPAWN_MAX_SECONDS.set(360);
-        ClientConfig.BIOME_WHITELIST_ENABLED.set(false);
-        ClientConfig.BIOME_WHITELIST.set("");
-
-        belowField.setValue("5");
-        aboveField.setValue("5");
-        radiusField.setValue("64");
-        spawnMinField.setValue("180");
-        spawnMaxField.setValue("360");
-        biomeWhitelistField.setValue("");
-        deletionButton.setMessage(deletionLabel());
-        biomeWhitelistButton.setMessage(biomeWhitelistLabel());
+        if (canEditStealer) {
+            resetRansomwareTiming = true;
+            deleteItems = true;
+            biomeWhitelistEnabled = false;
+            belowField.setValue("5");
+            aboveField.setValue("5");
+            radiusField.setValue("64");
+            spawnMinField.setValue("180");
+            spawnMaxField.setValue("360");
+            biomeWhitelistField.setValue("");
+            deletionButton.setMessage(deletionLabel());
+            biomeWhitelistButton.setMessage(biomeWhitelistLabel());
+        }
         if (canEditStealer) {
             stealerEnabled = true;
             stealerButton.setMessage(stealerLabel());
@@ -191,19 +204,36 @@ public final class RansomConfigScreen extends Screen {
 
     @Override
     public void onClose() {
-        int below = parse(belowField, ClientConfig.INFECTION_VERTICAL_BELOW.get(), 0, 128);
-        int above = parse(aboveField, ClientConfig.INFECTION_VERTICAL_ABOVE.get(), 0, 128);
-        int radius = parse(radiusField, ClientConfig.INFECTION_RADIUS.get(), 8, 256);
-        int spawnMin = parse(spawnMinField, ClientConfig.NATURAL_SPAWN_MIN_SECONDS.get(), 1, 86400);
-        int spawnMax = parse(spawnMaxField, ClientConfig.NATURAL_SPAWN_MAX_SECONDS.get(), 1, 86400);
-        spawnMax = Math.max(spawnMin, spawnMax);
-        ClientConfig.INFECTION_VERTICAL_BELOW.set(below);
-        ClientConfig.INFECTION_VERTICAL_ABOVE.set(above);
-        ClientConfig.INFECTION_RADIUS.set(radius);
-        ClientConfig.NATURAL_SPAWN_MIN_SECONDS.set(spawnMin);
-        ClientConfig.NATURAL_SPAWN_MAX_SECONDS.set(spawnMax);
-        ClientConfig.BIOME_WHITELIST.set(biomeWhitelistField.getValue().trim());
-        ClientConfig.SPEC.save();
+        if (canEditStealer) {
+            int below = parse(belowField, ransomValue(RansomwareConfig.INFECTION_VERTICAL_BELOW), 0, 128);
+            int above = parse(aboveField, ransomValue(RansomwareConfig.INFECTION_VERTICAL_ABOVE), 0, 128);
+            int radius = parse(radiusField, ransomValue(RansomwareConfig.INFECTION_RADIUS), 8, 256);
+            int spawnMin = parse(spawnMinField, ransomValue(RansomwareConfig.NATURAL_SPAWN_MIN_SECONDS), 1, 86400);
+            int spawnMax = parse(spawnMaxField, ransomValue(RansomwareConfig.NATURAL_SPAWN_MAX_SECONDS), 1, 86400);
+            spawnMax = Math.max(spawnMin, spawnMax);
+            double jumpscareEnd = resetRansomwareTiming ? 1.0 : ransomValue(RansomwareConfig.JUMPSCARE_ENDS_AT);
+            double downloadStart = resetRansomwareTiming ? 1.0 : ransomValue(RansomwareConfig.DOWNLOAD_STARTS_AT);
+            double downloadEnd = resetRansomwareTiming ? 2.0 : ransomValue(RansomwareConfig.DOWNLOAD_ENDS_AT);
+            String biomes = biomeWhitelistField.getValue().trim();
+            if (minecraft.player == null) {
+                RansomwareConfig.JUMPSCARE_ENDS_AT.set(jumpscareEnd);
+                RansomwareConfig.DOWNLOAD_STARTS_AT.set(downloadStart);
+                RansomwareConfig.DOWNLOAD_ENDS_AT.set(downloadEnd);
+                RansomwareConfig.DELETE_HOTBAR_ON_FAILURE.set(deleteItems);
+                RansomwareConfig.INFECTION_VERTICAL_BELOW.set(below);
+                RansomwareConfig.INFECTION_VERTICAL_ABOVE.set(above);
+                RansomwareConfig.INFECTION_RADIUS.set(radius);
+                RansomwareConfig.NATURAL_SPAWN_MIN_SECONDS.set(spawnMin);
+                RansomwareConfig.NATURAL_SPAWN_MAX_SECONDS.set(spawnMax);
+                RansomwareConfig.BIOME_WHITELIST_ENABLED.set(biomeWhitelistEnabled);
+                RansomwareConfig.BIOME_WHITELIST.set(biomes);
+                RansomwareConfig.SPEC.save();
+            } else {
+                PacketDistributor.sendToServer(new RansomwareSettingsPayload(jumpscareEnd, downloadStart,
+                        downloadEnd, deleteItems, below, above, radius, spawnMin, spawnMax,
+                        biomeWhitelistEnabled, biomes));
+            }
+        }
         if (canEditStealer) {
             int chance = parse(stealerChanceField, serverValue(StealerConfig.INFECTION_CHANCE_PERCENT), 0, 100);
             if (minecraft.player == null || minecraft.getSingleplayerServer() != null) StealerConfig.ENABLED.set(stealerEnabled);
@@ -222,7 +252,6 @@ public final class RansomConfigScreen extends Screen {
                     zombieChance, drownedChance, creeperChance));
             if (minecraft.player == null || minecraft.getSingleplayerServer() != null) StealerConfig.SPEC.save();
         }
-        RansomEncounter.refreshNaturalSpawnTimer();
         minecraft.setScreen(parent);
     }
 

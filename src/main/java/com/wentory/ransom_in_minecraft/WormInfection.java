@@ -1,5 +1,7 @@
 package com.wentory.ransom_in_minecraft;
 
+import com.wentory.ransom_in_minecraft.network.RansomPackets;
+
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.wentory.ransom_in_minecraft.network.WormInfectionPayload;
@@ -18,7 +20,6 @@ import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 @EventBusSubscriber(modid = RansomInMinecraft.MODID)
 public final class WormInfection {
@@ -27,14 +28,16 @@ public final class WormInfection {
     private WormInfection() {}
     public static int get(ServerPlayer player) { return Math.clamp(player.getPersistentData().getInt(VALUE), 0, 100); }
     public static int set(ServerPlayer player, int value) {
+        if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(player.getServer())) return get(player);
         int next = StealerConfig.WORM_ENABLED.get() && player.isAlive() ? Math.clamp(value, 0, 100) : 0;
         player.getPersistentData().putInt(VALUE, next);
-        PacketDistributor.sendToPlayer(player, new WormInfectionPayload(next));
+        RansomPackets.sendToPlayer(player, new WormInfectionPayload(next));
         return next;
     }
     public static void add(ServerPlayer player, int amount) { set(player, get(player) + amount); }
 
     @SubscribeEvent public static void tick(PlayerTickEvent.Post event) {
+        if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(event.getEntity().getServer())) return;
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         int value = get(player);
         if (!StealerConfig.WORM_ENABLED.get() || !player.isAlive()) {

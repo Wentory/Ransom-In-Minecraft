@@ -56,6 +56,10 @@ public final class WormEffects {
 
     @SubscribeEvent public static void tick(ClientTickEvent.Pre event) {
         Minecraft mc = Minecraft.getInstance();
+        if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(mc.getSingleplayerServer())) {
+            releaseMovement();
+            return;
+        }
         if (mc.isPaused()) return;
         tick++;
         if (value < 75 || mc.player == null || !mc.player.isAlive() || mc.screen != null) {

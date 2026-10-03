@@ -10,7 +10,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import java.util.Map;
 
@@ -42,6 +41,6 @@ public record CommonSettingsPayload(boolean stealer, int chestChance, boolean hi
                 StealerConfig.HIJACK_CREEPER_CHANCE.get());
     }
     @SubscribeEvent public static void login(PlayerEvent.PlayerLoggedInEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) PacketDistributor.sendToPlayer(player, current());
+        if (event.getEntity() instanceof ServerPlayer player) RansomPackets.sendToPlayer(player, current());
     }
 }

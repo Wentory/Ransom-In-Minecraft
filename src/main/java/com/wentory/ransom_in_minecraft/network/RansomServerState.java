@@ -1,6 +1,7 @@
 package com.wentory.ransom_in_minecraft.network;
 
 import com.wentory.ransom_in_minecraft.RansomInMinecraft;
+import com.wentory.ransom_in_minecraft.RansomwareConfig;
 import com.wentory.ransom_in_minecraft.StealerConfig;
 import com.wentory.ransom_in_minecraft.InfectedZombies;
 import com.wentory.ransom_in_minecraft.InfectedCreepers;
@@ -31,7 +32,6 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -50,6 +50,7 @@ public final class RansomServerState {
     private static final int ALL_MAIN_INVENTORY_SLOTS = (1 << 27) - 1;
     private static final Map<UUID, LockedInventory> LOCKED_PLAYERS = new HashMap<>();
     private static final Map<UUID, Long> LAST_GLITCH_HIT = new HashMap<>();
+    private static final Map<UUID, Integer> NATURAL_SPAWN_TIMERS = new HashMap<>();
 
     private RansomServerState() {}
 
@@ -61,6 +62,29 @@ public final class RansomServerState {
         var registrar = event.registrar("1");
         registrar.playToClient(CommonSettingsPayload.TYPE, CommonSettingsPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(payload::accept));
+        registrar.playToClient(RansomwareSyncPayload.TYPE, RansomwareSyncPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(payload::accept));
+        registrar.playToServer(RansomwareSettingsPayload.TYPE, RansomwareSettingsPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (!(context.player() instanceof ServerPlayer player)
+                            || !player.hasPermissions(2)
+                            && !player.getServer().isSingleplayerOwner(player.getGameProfile())) return;
+                    RansomwareConfig.JUMPSCARE_ENDS_AT.set(Math.clamp(payload.jumpscareEnd(), 0.05, 30.0));
+                    RansomwareConfig.DOWNLOAD_STARTS_AT.set(Math.clamp(payload.downloadStart(), 0.0, 30.0));
+                    RansomwareConfig.DOWNLOAD_ENDS_AT.set(Math.clamp(payload.downloadEnd(), 0.05, 30.0));
+                    RansomwareConfig.DELETE_HOTBAR_ON_FAILURE.set(payload.deleteItems());
+                    RansomwareConfig.INFECTION_VERTICAL_BELOW.set(Math.clamp(payload.below(), 0, 128));
+                    RansomwareConfig.INFECTION_VERTICAL_ABOVE.set(Math.clamp(payload.above(), 0, 128));
+                    RansomwareConfig.INFECTION_RADIUS.set(Math.clamp(payload.radius(), 8, 256));
+                    int minimum = Math.clamp(payload.spawnMin(), 1, 86400);
+                    RansomwareConfig.NATURAL_SPAWN_MIN_SECONDS.set(minimum);
+                    RansomwareConfig.NATURAL_SPAWN_MAX_SECONDS.set(Math.clamp(payload.spawnMax(), minimum, 86400));
+                    RansomwareConfig.BIOME_WHITELIST_ENABLED.set(payload.biomeWhitelistEnabled());
+                    RansomwareConfig.BIOME_WHITELIST.set(payload.biomeWhitelist());
+                    RansomwareConfig.SPEC.save();
+                    NATURAL_SPAWN_TIMERS.clear();
+                    RansomPackets.sendToAllPlayers(RansomwareSyncPayload.current());
+                }));
         registrar.playToClient(WormInfectionPayload.TYPE, WormInfectionPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> WormEffects.accept(payload.value())));
         registrar.playToServer(WormSettingsPayload.TYPE, WormSettingsPayload.STREAM_CODEC, (payload, context) -> {
@@ -72,7 +96,7 @@ public final class RansomServerState {
             StealerConfig.HIJACK_DROWNED_CHANCE.set(Math.clamp(payload.drownedChance(), 0, 100));
             StealerConfig.HIJACK_CREEPER_CHANCE.set(Math.clamp(payload.creeperChance(), 0, 100));
             StealerConfig.SPEC.save();
-            PacketDistributor.sendToAllPlayers(CommonSettingsPayload.current());
+            RansomPackets.sendToAllPlayers(CommonSettingsPayload.current());
         });
         RansomChestGame.registerPayloads(registrar);
         registrar.playToServer(StealerSettingsPayload.TYPE, StealerSettingsPayload.STREAM_CODEC,
@@ -84,13 +108,16 @@ public final class RansomServerState {
                     StealerConfig.INFECTION_CHANCE_PERCENT.set(
                             Math.max(0, Math.min(100, payload.chancePercent())));
                     StealerConfig.SPEC.save();
-                    PacketDistributor.sendToAllPlayers(CommonSettingsPayload.current());
+                    RansomPackets.sendToAllPlayers(CommonSettingsPayload.current());
                 });
         registrar.playToServer(RansomStatePayload.TYPE, RansomStatePayload.STREAM_CODEC,
                 (payload, context) -> {
                     if (!(context.player() instanceof ServerPlayer player)) return;
                     if (payload.penaltyDamage() > 0) damage(player, payload.penaltyDamage(), payload.coins());
-                    else if (payload.failure()) fail(player, payload.coins(), payload.deleteHotbar());
+                    else if (payload.failure()) fail(player, payload.coins(),
+                            player.getPersistentData().getBoolean(FAILURE_ARMED)
+                                    ? player.getPersistentData().getBoolean(FAILURE_DELETE_HOTBAR)
+                                    : RansomwareConfig.DELETE_HOTBAR_ON_FAILURE.get());
                     else if (payload.active()) lockHands(player);
                     else unlockHands(player);
                 });
@@ -116,7 +143,8 @@ public final class RansomServerState {
                 (payload, context) -> {
                     if (!(context.player() instanceof ServerPlayer player)) return;
                     player.getPersistentData().putBoolean(FAILURE_ARMED, true);
-                    player.getPersistentData().putBoolean(FAILURE_DELETE_HOTBAR, payload.deleteHotbar());
+                    player.getPersistentData().putBoolean(FAILURE_DELETE_HOTBAR,
+                            RansomwareConfig.DELETE_HOTBAR_ON_FAILURE.get());
                     player.getPersistentData().putInt(COINS, Math.max(0, payload.coins()));
                 });
         registrar.playToClient(RansomFailureScarePayload.TYPE, RansomFailureScarePayload.STREAM_CODEC,
@@ -130,8 +158,6 @@ public final class RansomServerState {
                 }));
         registrar.playToClient(RansomForcedAttackPayload.TYPE, RansomForcedAttackPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> ClientRansomResumeTracker.acceptForcedAttack(payload)));
-        registrar.playToClient(NaturalSpawnStatePayload.TYPE, NaturalSpawnStatePayload.STREAM_CODEC,
-                (payload, context) -> context.enqueueWork(() -> ClientNaturalSpawnState.accept(payload)));
         registrar.playToServer(GlitchContactPayload.TYPE, GlitchContactPayload.STREAM_CODEC,
                 (payload, context) -> {
                     if (context.player() instanceof ServerPlayer player) handleGlitchContact(player);
@@ -145,7 +171,7 @@ public final class RansomServerState {
                     if (!(context.player() instanceof ServerPlayer player)) return;
                     int effect = Math.max(PlayerVisualEffectPayload.CLEAR,
                             Math.min(PlayerVisualEffectPayload.SUCCESS, payload.effect()));
-                    PacketDistributor.sendToPlayersTrackingEntityAndSelf(player,
+                    RansomPackets.sendToPlayersTrackingEntityAndSelf(player,
                             new PlayerVisualEffectPayload(player.getUUID(), effect));
                 });
         registrar.playToClient(PlayerVisualEffectPayload.TYPE, PlayerVisualEffectPayload.STREAM_CODEC,
@@ -214,7 +240,7 @@ public final class RansomServerState {
         for (ServerPlayer target : targets) {
             if (enabled) target.getPersistentData().remove(NATURAL_SPAWN_DISABLED);
             else target.getPersistentData().putBoolean(NATURAL_SPAWN_DISABLED, true);
-            syncNaturalSpawnState(target);
+            NATURAL_SPAWN_TIMERS.remove(target.getUUID());
         }
         source.sendSuccess(() -> Component.literal("Natural Ransom spawning "
                 + (enabled ? "enabled" : "disabled") + " for " + targets.size() + " player(s)."), true);
@@ -235,7 +261,7 @@ public final class RansomServerState {
                                     java.util.Collection<ServerPlayer> targets) {
         for (ServerPlayer target : targets) {
             unlockHands(target);
-            PacketDistributor.sendToPlayer(target, new RansomCancelPayload(true));
+            RansomPackets.sendToPlayer(target, new RansomCancelPayload(true));
         }
         source.sendSuccess(() -> Component.literal("Cancelled Ransomware for "
                 + targets.size() + " player(s)."), true);
@@ -244,15 +270,56 @@ public final class RansomServerState {
 
     static int summonRansom(ServerPlayer target) {
         if (target.getPersistentData().getBoolean(ACTIVE)) return 0;
-        PacketDistributor.sendToPlayer(target, new RansomSummonPayload(true));
+        RansomPackets.sendToPlayer(target, new RansomSummonPayload(true));
         return 1;
     }
 
     @SubscribeEvent
     public static void keepMainHandEmpty(PlayerTickEvent.Post event) {
+        if (ReplayCompatibility.isReplayServer(event.getEntity().getServer())) return;
         if (!(event.getEntity() instanceof ServerPlayer player)
                 || !LOCKED_PLAYERS.containsKey(player.getUUID())) return;
         player.getInventory().selected = Inventory.getSelectionSize();
+    }
+
+    @SubscribeEvent
+    public static void naturalSpawnTick(PlayerTickEvent.Post event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        UUID id = player.getUUID();
+        if (!player.isAlive() || player.getPersistentData().getBoolean(NATURAL_SPAWN_DISABLED)
+                || isEncounterActive(player) || RansomChestGame.hasActiveGame(player)) {
+            NATURAL_SPAWN_TIMERS.remove(id);
+            return;
+        }
+        int remaining = NATURAL_SPAWN_TIMERS.computeIfAbsent(id, ignored -> randomNaturalSpawnDelayTicks()) - 1;
+        if (remaining > 0) {
+            NATURAL_SPAWN_TIMERS.put(id, remaining);
+            return;
+        }
+        if (!naturalSpawnAllowedInCurrentBiome(player)) {
+            NATURAL_SPAWN_TIMERS.put(id, 20);
+            return;
+        }
+        NATURAL_SPAWN_TIMERS.put(id, randomNaturalSpawnDelayTicks());
+        summonRansom(player);
+    }
+
+    private static int randomNaturalSpawnDelayTicks() {
+        int minimum = RansomwareConfig.NATURAL_SPAWN_MIN_SECONDS.get();
+        int maximum = Math.max(minimum, RansomwareConfig.NATURAL_SPAWN_MAX_SECONDS.get());
+        int seconds = java.util.concurrent.ThreadLocalRandom.current().nextInt(minimum, maximum + 1);
+        return seconds * 20;
+    }
+
+    private static boolean naturalSpawnAllowedInCurrentBiome(ServerPlayer player) {
+        if (!RansomwareConfig.BIOME_WHITELIST_ENABLED.get()) return true;
+        var biomeKey = player.serverLevel().getBiome(player.blockPosition()).unwrapKey();
+        if (biomeKey.isEmpty()) return false;
+        String currentBiome = biomeKey.get().location().toString();
+        for (String configuredBiome : RansomwareConfig.BIOME_WHITELIST.get().split(",")) {
+            if (currentBiome.equals(configuredBiome.trim())) return true;
+        }
+        return false;
     }
 
     @SubscribeEvent
@@ -277,6 +344,7 @@ public final class RansomServerState {
     @SubscribeEvent
     public static void playerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        NATURAL_SPAWN_TIMERS.remove(player.getUUID());
         LAST_GLITCH_HIT.remove(player.getUUID());
         if (player.getPersistentData().getBoolean(FAILURE_ARMED)) {
             unlockHands(player, false);
@@ -290,18 +358,19 @@ public final class RansomServerState {
 
     @SubscribeEvent
     public static void playerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        if (ReplayCompatibility.isReplayServer(event.getEntity().getServer())) return;
         if (!(event.getEntity() instanceof ServerPlayer joining)) return;
-        syncNaturalSpawnState(joining);
+        RansomPackets.sendToPlayer(joining, RansomwareSyncPayload.current());
         syncEncryptedSlots(joining, false);
         for (UUID infected : LOCKED_PLAYERS.keySet()) {
-            PacketDistributor.sendToPlayer(joining, new InfectionStatusPayload(infected, true));
+            RansomPackets.sendToPlayer(joining, new InfectionStatusPayload(infected, true));
         }
         if (joining.getPersistentData().getBoolean(FAILURE_ARMED)) {
-            PacketDistributor.sendToPlayer(joining, new RansomFailureScarePayload(
+            RansomPackets.sendToPlayer(joining, new RansomFailureScarePayload(
                     joining.getPersistentData().getInt(COINS),
                     joining.getPersistentData().getBoolean(FAILURE_DELETE_HOTBAR)));
         } else if (joining.getPersistentData().getBoolean(ACTIVE)) {
-            PacketDistributor.sendToPlayer(joining, new RansomResumePayload(
+            RansomPackets.sendToPlayer(joining, new RansomResumePayload(
                     joining.getPersistentData().getInt(COINS),
                     joining.getPersistentData().getInt(TARGET),
                     joining.getPersistentData().getInt(TICKS)));
@@ -332,11 +401,6 @@ public final class RansomServerState {
         syncEncryptedSlots((ServerPlayer) event.getEntity(), false);
     }
 
-    private static void syncNaturalSpawnState(ServerPlayer player) {
-        PacketDistributor.sendToPlayer(player, new NaturalSpawnStatePayload(
-                !player.getPersistentData().getBoolean(NATURAL_SPAWN_DISABLED)));
-    }
-
     private static void fail(ServerPlayer player, int coins, boolean deleteHotbar) {
         if (deleteHotbar) deleteEncryptedItems(player);
         else unlockHands(player);
@@ -350,7 +414,7 @@ public final class RansomServerState {
         if (now - previous < 40L || !damageGlitch(player)) return;
         LAST_GLITCH_HIT.put(player.getUUID(), now);
         WormInfection.add(player, 5);
-        PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, new PlayerGlitchPayload(player.getUUID()));
+        RansomPackets.sendToPlayersTrackingEntityAndSelf(player, new PlayerGlitchPayload(player.getUUID()));
 
         int mask = player.getPersistentData().getInt(ENCRYPTED_SLOTS) & ALL_MAIN_INVENTORY_SLOTS;
         int available = 27 - Integer.bitCount(mask);
@@ -365,7 +429,7 @@ public final class RansomServerState {
             }
             player.getPersistentData().putInt(ENCRYPTED_SLOTS, mask);
         }
-        PacketDistributor.sendToPlayer(player, new EncryptedSlotsPayload(mask, true));
+        RansomPackets.sendToPlayer(player, new EncryptedSlotsPayload(mask, true));
     }
 
     private static boolean damageGlitch(ServerPlayer player) {
@@ -399,7 +463,7 @@ public final class RansomServerState {
         LockedInventory previous = LOCKED_PLAYERS.putIfAbsent(player.getUUID(), new LockedInventory(
                 Inventory.isHotbarSlot(player.getInventory().selected) ? player.getInventory().selected : 0));
         if (previous == null) {
-            PacketDistributor.sendToAllPlayers(new InfectionStatusPayload(player.getUUID(), true));
+            RansomPackets.sendToAllPlayers(new InfectionStatusPayload(player.getUUID(), true));
         }
         player.getInventory().selected = Inventory.getSelectionSize();
     }
@@ -412,7 +476,7 @@ public final class RansomServerState {
         LockedInventory locked = LOCKED_PLAYERS.remove(player.getUUID());
         if (locked != null) {
             player.getInventory().selected = locked.selectedSlot();
-            PacketDistributor.sendToAllPlayers(new InfectionStatusPayload(player.getUUID(), false));
+            RansomPackets.sendToAllPlayers(new InfectionStatusPayload(player.getUUID(), false));
         }
         if (clearDebt) clearProgress(player);
     }
@@ -428,7 +492,7 @@ public final class RansomServerState {
         }
         player.getInventory().selected = locked != null ? locked.selectedSlot() : 0;
         if (locked != null) {
-            PacketDistributor.sendToAllPlayers(new InfectionStatusPayload(player.getUUID(), false));
+            RansomPackets.sendToAllPlayers(new InfectionStatusPayload(player.getUUID(), false));
         }
         clearProgress(player);
     }
@@ -476,7 +540,7 @@ public final class RansomServerState {
 
     private static void syncEncryptedSlots(ServerPlayer player, boolean glitchHit) {
         int mask = player.getPersistentData().getInt(ENCRYPTED_SLOTS) & ALL_MAIN_INVENTORY_SLOTS;
-        PacketDistributor.sendToPlayer(player, new EncryptedSlotsPayload(mask, glitchHit));
+        RansomPackets.sendToPlayer(player, new EncryptedSlotsPayload(mask, glitchHit));
     }
 
     private record LockedInventory(int selectedSlot) {}

@@ -1,5 +1,6 @@
 package com.wentory.ransom_in_minecraft;
 
+import com.mojang.logging.LogUtils;
 import com.wentory.ransom_in_minecraft.network.RansomServerState;
 import com.wentory.ransom_in_minecraft.client.RansomClientSetup;
 import net.minecraft.core.registries.Registries;
@@ -10,13 +11,21 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import org.slf4j.Logger;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 @Mod(RansomInMinecraft.MODID)
 public class RansomInMinecraft {
     public static final String MODID = "ransom_in_minecraft";
+    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String RANSOMWARE_CONFIG_FILE = "ransom_in_minecraft-ransomware.toml";
     public static final DeferredRegister<SoundEvent> SOUNDS = DeferredRegister.create(Registries.SOUND_EVENT, MODID);
     public static final DeferredHolder<SoundEvent, SoundEvent> SPAWN = sound("spawn");
     public static final DeferredHolder<SoundEvent, SoundEvent> JUMPSCARE = sound("jumpscare");
@@ -57,10 +66,25 @@ public class RansomInMinecraft {
     public RansomInMinecraft(IEventBus modBus, ModContainer container) {
         SOUNDS.register(modBus);
         modBus.addListener(RansomServerState::registerPayloads);
-        container.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
+        migrateRansomwareConfig();
+        container.registerConfig(ModConfig.Type.COMMON, RansomwareConfig.SPEC,
+                RANSOMWARE_CONFIG_FILE);
         container.registerConfig(ModConfig.Type.COMMON, StealerConfig.SPEC);
         if (FMLEnvironment.dist == Dist.CLIENT) {
             RansomClientSetup.registerConfigScreen(container);
+        }
+    }
+
+    private static void migrateRansomwareConfig() {
+        Path configDir = FMLPaths.CONFIGDIR.get();
+        Path oldConfig = configDir.resolve("ransom_in_minecraft-client.toml");
+        Path newConfig = configDir.resolve(RANSOMWARE_CONFIG_FILE);
+        if (!Files.isRegularFile(oldConfig) || Files.exists(newConfig)) return;
+        try {
+            Files.copy(oldConfig, newConfig);
+            LOGGER.info("Migrated Ransomware settings from {} to {}", oldConfig, newConfig);
+        } catch (IOException error) {
+            LOGGER.warn("Could not migrate old Ransomware settings from {}", oldConfig, error);
         }
     }
 
