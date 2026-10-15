@@ -107,3 +107,32 @@ publishing {
 }
 
 tasks.withType(JavaCompile).configureEach { options.compilerArgs += ['-Xmaxerrs', '1000'] }
+
+tasks.register('rulesTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.wentory.ransom_in_minecraft.rules.RuleContractTest'
+}
+tasks.named('check') { dependsOn tasks.named('rulesTest') }
+
+// Regression for ModelPart bulk vertices entering the unlit chest-light layer.
+tasks.register('chestLightTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.wentory.ransom_in_minecraft.client.ChestLightVertexTest'
+}
+tasks.named('check') { dependsOn tasks.named('chestLightTest') }
+
+tasks.register('shaderBlendTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.wentory.ransom_in_minecraft.client.ShaderBlendTest'
+}
+tasks.named('check') { dependsOn tasks.named('shaderBlendTest') }
+
+tasks.register('moonlightParticleTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.wentory.ransom_in_minecraft.client.MoonlightParticleTest'
+}
+tasks.named('check') { dependsOn tasks.named('moonlightParticleTest') }

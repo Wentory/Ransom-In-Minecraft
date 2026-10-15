@@ -1,4 +1,6 @@
 package com.wentory.ransom_in_minecraft.client;
+import com.wentory.ransom_in_minecraft.network.CommonSettingsPayload;
+import com.wentory.ransom_in_minecraft.StealerConfig;
 
 import com.wentory.ransom_in_minecraft.RansomInMinecraft;
 import com.wentory.ransom_in_minecraft.network.ChestQteAdvancePayload;
@@ -379,14 +381,11 @@ public final class RansomChestScreen extends ContainerScreen {
     }
 
     private static int timeForKey(int index) {
-        if (index < 5) return 10;
-        return 12 + (index - 5) * 2;
+        return com.wentory.ransom_in_minecraft.rules.QteRules.keyTicks(index, CommonSettingsPayload.remoteValue(StealerConfig.DIFFICULTY));
     }
 
-    private static int timeForRound(int keyCount) {
-        int total = 0;
-        for (int index = 0; index < keyCount; index++) total += timeForKey(index);
-        return total;
+    private static int timeForRound(int length) {
+        return com.wentory.ransom_in_minecraft.rules.QteRules.roundTicks(length, CommonSettingsPayload.remoteValue(StealerConfig.DIFFICULTY));
     }
 
     private void beginEnding() {

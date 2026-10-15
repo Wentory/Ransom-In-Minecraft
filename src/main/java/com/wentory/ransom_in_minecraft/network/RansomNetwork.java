@@ -7,11 +7,16 @@ import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public final class RansomNetwork {
-    private static final String VERSION = "3";
+    private static final String VERSION = "4";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(RansomInMinecraft.MODID, "main"), () -> VERSION, VERSION::equals, VERSION::equals);
     private RansomNetwork() {}
-    public static void register() { RansomServerState.registerPayloads(new PayloadRegistrar()); }
+    public static void register() {
+        var registrar = new PayloadRegistrar();
+        RansomServerState.registerPayloads(registrar);
+        com.wentory.ransom_in_minecraft.FullHijack.register(registrar);
+        com.wentory.ransom_in_minecraft.CaveRansom.register(registrar);
+    }
     public static void sendToServer(Object payload) { CHANNEL.sendToServer(payload); }
     public static void sendTo(ServerPlayer player, Object payload) {
         if (!ReplayCompatibility.isReplayServer(player.getServer()) && CHANNEL.isRemotePresent(player.connection.connection))

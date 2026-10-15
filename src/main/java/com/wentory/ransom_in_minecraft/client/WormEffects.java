@@ -62,6 +62,7 @@ public final class WormEffects {
             return;
         }
         if (mc.isPaused()) return;
+        if (FullHijackClient.active() || FullHijackClient.exiting()) { releaseMovement(); duplicate=null; return; }
         tick++;
         if (value < 75 || mc.player == null || !mc.player.isAlive() || mc.screen != null) {
             releaseMovement(); duplicate = null; nextImpulse = tick + 100; return;
@@ -100,6 +101,7 @@ public final class WormEffects {
     }
 
     @SubscribeEvent public static void falseHud(RenderGuiOverlayEvent.Pre event) {
+        if (FullHijackClient.active() || FullHijackClient.exiting()) return;
         Minecraft mc = Minecraft.getInstance();
         if (value == 0 || mc.player == null || mc.player.isCreative() || mc.player.isSpectator()) return;
         boolean health = event.getOverlay().id().equals(VanillaGuiOverlay.PLAYER_HEALTH.id());
@@ -126,6 +128,7 @@ public final class WormEffects {
     }
 
     @SubscribeEvent public static void overlay(RenderGuiEvent.Post event) {
+        if (FullHijackClient.active() || FullHijackClient.exiting()) return;
         Minecraft mc = Minecraft.getInstance();
         if (value < 25 || mc.player == null || !mc.player.isAlive()) return;
         GuiGraphics g = event.getGuiGraphics();

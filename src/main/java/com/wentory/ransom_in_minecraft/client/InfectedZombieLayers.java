@@ -5,14 +5,10 @@ import com.wentory.ransom_in_minecraft.RansomInMinecraft;
 import com.wentory.ransom_in_minecraft.network.ClientInfectedZombies;
 import net.minecraft.client.model.AbstractZombieModel;
 import net.minecraft.client.renderer.entity.DrownedRenderer;
-import net.minecraft.world.entity.monster.Drowned;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.ZombieRenderer;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
-import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraftforge.api.distmarker.Dist;
@@ -22,9 +18,6 @@ import net.minecraftforge.client.event.EntityRenderersEvent;
 
 @EventBusSubscriber(modid = RansomInMinecraft.MODID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
 public final class InfectedZombieLayers {
-    private static final ResourceLocation GLITCH = new ResourceLocation(
-            RansomInMinecraft.MODID, "textures/glitch.png");
-
     private InfectedZombieLayers() {}
 
     @SubscribeEvent
@@ -45,19 +38,8 @@ public final class InfectedZombieLayers {
                            float limbSwing, float limbSwingAmount, float partialTick,
                            float ageInTicks, float netHeadYaw, float headPitch) {
             if (!ClientInfectedZombies.contains(zombie.getUUID()) || zombie.isInvisible() || zombie.isDeadOrDying()) return;
-            M model = getParentModel();
-            pose.pushPose();
-            pose.scale(1.035F, 1.035F, 1.035F);
-            model.renderToBuffer(pose,
-                    buffers.getBuffer(RenderType.entityTranslucent(getTextureLocation(zombie))),
-                    packedLight, OverlayTexture.NO_OVERLAY, 1.000000F, 0.062745F, 0.062745F, 0.462745F);
-            pose.popPose();
-            pose.pushPose();
-            pose.scale(1.055F, 1.055F, 1.055F);
-            var animated = new AnimatedSheetVertexConsumer(
-                    buffers.getBuffer(RenderType.entityTranslucentEmissive(GLITCH)), zombie.tickCount / 2, 6);
-            model.renderToBuffer(pose, animated, 0x00F000F0, OverlayTexture.NO_OVERLAY, 1.000000F, 1.000000F, 1.000000F, 0.800000F);
-            pose.popPose();
+            HijackedMobSurface.render(getParentModel(), getTextureLocation(zombie), pose, buffers,
+                    packedLight, zombie.tickCount, 0x76FF1010);
         }
     }
 }

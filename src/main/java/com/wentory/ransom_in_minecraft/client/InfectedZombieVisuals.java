@@ -55,7 +55,7 @@ public final class InfectedZombieVisuals {
         renderStop(event, zombie);
     }
 
-    private static void renderStop(RenderLivingEvent<?, ?> event, LivingEntity entity) {
+    static void renderStop(RenderLivingEvent<?, ?> event, LivingEntity entity) {
         if (!(entity instanceof Zombie)) return;
         float remaining = ClientInfectedZombies.stopRemaining(entity.getUUID(), event.getPartialTick());
         if (remaining <= 0) return;

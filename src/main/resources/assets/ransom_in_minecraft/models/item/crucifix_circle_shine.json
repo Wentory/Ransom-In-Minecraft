@@ -1,0 +1,130 @@
+{
+	"format_version": "1.9.0",
+	"credit": "Made with Blockbench",
+	"texture_size": [228, 7],
+	"textures": {
+		"4": "ransom_in_minecraft:item/crucifix/shine"
+	},
+	"elements": [
+		{
+			"from": [-4.3, 1.2, -4.3],
+			"to": [-4.3, 8.2, 20.2],
+			"rotation": {"angle": -45, "axis": "y", "origin": [8, 0.8, 8]},
+			"faces": {
+				"north": {"uv": [0, 0, 4, 16], "texture": "#4"},
+				"east": {"uv": [0, 0, 4, 16], "texture": "#4"},
+				"south": {"uv": [0, 0, 4, 16], "texture": "#4"},
+				"west": {"uv": [0, 0, 4, 16], "texture": "#4"},
+				"up": {"uv": [0, 0, 4, 16], "texture": "#4"},
+				"down": {"uv": [0, 0, 4, 16], "texture": "#4"}
+			}
+		},
+		{
+			"from": [-4.2, 1.2, -4.3],
+			"to": [20.3, 8.2, -4.3],
+			"rotation": {"angle": -45, "axis": "y", "origin": [8, 0.8, 7.9]},
+			"faces": {
+				"north": {"uv": [4, 0, 8, 16], "texture": "#4"},
+				"east": {"uv": [4, 0, 8, 16], "texture": "#4"},
+				"south": {"uv": [4, 0, 8, 16], "texture": "#4"},
+				"west": {"uv": [4, 0, 8, 16], "texture": "#4"},
+				"up": {"uv": [4, 0, 8, 16], "texture": "#4"},
+				"down": {"uv": [4, 0, 8, 16], "texture": "#4"}
+			}
+		},
+		{
+			"from": [20.3, 1.2, -4.3],
+			"to": [20.3, 8.2, 20.2],
+			"rotation": {"angle": -45, "axis": "y", "origin": [8.1, 0.8, 7.9]},
+			"faces": {
+				"north": {"uv": [8, 0, 12, 16], "texture": "#4"},
+				"east": {"uv": [8, 0, 12, 16], "texture": "#4"},
+				"south": {"uv": [8, 0, 12, 16], "texture": "#4"},
+				"west": {"uv": [8, 0, 12, 16], "texture": "#4"},
+				"up": {"uv": [8, 0, 12, 16], "texture": "#4"},
+				"down": {"uv": [8, 0, 12, 16], "texture": "#4"}
+			}
+		},
+		{
+			"from": [-4.3, 1.2, 20.3],
+			"to": [20.2, 8.2, 20.3],
+			"rotation": {"angle": -45, "axis": "y", "origin": [8.1, 0.8, 8]},
+			"faces": {
+				"north": {"uv": [12, 0, 16, 16], "texture": "#4"},
+				"east": {"uv": [12, 0, 16, 16], "texture": "#4"},
+				"south": {"uv": [12, 0, 16, 16], "texture": "#4"},
+				"west": {"uv": [12, 0, 16, 16], "texture": "#4"},
+				"up": {"uv": [12, 0, 16, 16], "texture": "#4"},
+				"down": {"uv": [12, 0, 16, 16], "texture": "#4"}
+			}
+		},
+		{
+			"from": [-4.2, 0.8, -4.3],
+			"to": [20.3, 7.8, -4.3],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 0.8, 8]},
+			"faces": {
+				"north": {"uv": [0, 0, 4, 16], "texture": "#4"},
+				"east": {"uv": [0, 0, 4, 16], "texture": "#4"},
+				"south": {"uv": [0, 0, 4, 16], "texture": "#4"},
+				"west": {"uv": [0, 0, 4, 16], "texture": "#4"},
+				"up": {"uv": [0, 0, 4, 16], "rotation": 90, "texture": "#4"},
+				"down": {"uv": [0, 0, 4, 16], "rotation": 270, "texture": "#4"}
+			}
+		},
+		{
+			"from": [20.2, 0.8, -4.3],
+			"to": [20.2, 7.8, 20.2],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 0.8, 7.9]},
+			"faces": {
+				"north": {"uv": [4, 0, 8, 16], "texture": "#4"},
+				"east": {"uv": [4, 0, 8, 16], "texture": "#4"},
+				"south": {"uv": [4, 0, 8, 16], "texture": "#4"},
+				"west": {"uv": [4, 0, 8, 16], "texture": "#4"},
+				"up": {"uv": [4, 0, 8, 16], "rotation": 90, "texture": "#4"},
+				"down": {"uv": [4, 0, 8, 16], "rotation": 270, "texture": "#4"}
+			}
+		},
+		{
+			"from": [-4.2, 0.8, 20.1],
+			"to": [20.3, 7.8, 20.1],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8.1, 0.8, 7.9]},
+			"faces": {
+				"north": {"uv": [8, 0, 12, 16], "texture": "#4"},
+				"east": {"uv": [8, 0, 12, 16], "texture": "#4"},
+				"south": {"uv": [8, 0, 12, 16], "texture": "#4"},
+				"west": {"uv": [8, 0, 12, 16], "texture": "#4"},
+				"up": {"uv": [8, 0, 12, 16], "rotation": 90, "texture": "#4"},
+				"down": {"uv": [8, 0, 12, 16], "rotation": 270, "texture": "#4"}
+			}
+		},
+		{
+			"from": [-4.2, 0.8, -4.4],
+			"to": [-4.2, 7.8, 20.1],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8.1, 0.8, 8]},
+			"faces": {
+				"north": {"uv": [12, 0, 16, 16], "texture": "#4"},
+				"east": {"uv": [12, 0, 16, 16], "texture": "#4"},
+				"south": {"uv": [12, 0, 16, 16], "texture": "#4"},
+				"west": {"uv": [12, 0, 16, 16], "texture": "#4"},
+				"up": {"uv": [12, 0, 16, 16], "rotation": 90, "texture": "#4"},
+				"down": {"uv": [12, 0, 16, 16], "rotation": 270, "texture": "#4"}
+			}
+		}
+	],
+	"groups": [
+		{
+			"name": "shine_2",
+			"origin": [8, 8, 8],
+			"scope": 0,
+			"color": 0,
+			"children": [0, 1, 2, 3]
+		},
+		{
+			"name": "shine_2",
+			"origin": [8, 8, 8],
+			"scope": 0,
+			"color": 0,
+			"children": [4, 5, 6, 7]
+		}
+	]
+}

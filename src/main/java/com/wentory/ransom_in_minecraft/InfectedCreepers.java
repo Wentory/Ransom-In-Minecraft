@@ -31,6 +31,8 @@ public final class InfectedCreepers {
     private static final String INFECTED = "ransom_infected_creeper";
     private static final String PHASE = "ransom_creeper_phase";
     private static final String END = "ransom_creeper_rise_end";
+    private static final String STOP_END = "ransom_creeper_stop_end";
+    private static final int DAMAGE_STOP_TICKS = 100;
     private static final ResourceLocation RANGE_ID = new ResourceLocation(
             RansomInMinecraft.MODID, "infected_creeper_detection_range");
     private InfectedCreepers() {}
@@ -88,6 +90,9 @@ public final class InfectedCreepers {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         if (event.getTarget() instanceof Creeper creeper && isInfected(creeper)) {
             PacketDistributor.sendToPlayer(player, new WormCreeperPayload(creeper.getUUID(), phase(creeper)));
+            int remaining = (int) Math.max(0, creeper.getPersistentData().getLong(STOP_END) - creeper.level().getGameTime());
+            if (remaining > 0) PacketDistributor.sendToPlayer(player,
+                    new com.wentory.ransom_in_minecraft.network.ZombieStopPayload(creeper.getUUID(), remaining));
         }
     }
 
@@ -95,7 +100,24 @@ public final class InfectedCreepers {
         if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(event.getEntity().getServer())) return;
         if (event.getEntity().level().isClientSide()) return;
         if (!(event.getEntity() instanceof Creeper creeper) || !creeper.isAlive() || !isInfected(creeper)) return;
+        if (CrucifixActions.isBanishing(creeper)) return;
+        if (creeper.getTarget() instanceof Player captured && FullHijack.active(captured)) {
+            creeper.setTarget(null);
+            creeper.getPersistentData().putInt(PHASE, 0);
+            creeper.refreshDimensions();
+            creeper.setNoGravity(false);
+            creeper.setDeltaMovement(Vec3.ZERO);
+            sync(creeper);
+        }
         if (InfectedZombies.isBeingInfected(creeper)) return;
+        if (creeper.level().getGameTime() < creeper.getPersistentData().getLong(STOP_END)) {
+            freeze(creeper);
+            return;
+        }
+        if (creeper.getPersistentData().contains(STOP_END)) {
+            creeper.getPersistentData().remove(STOP_END);
+            creeper.setNoGravity(phase(creeper) != 0);
+        }
         creeper.setSwellDir(-1);
         creeper.getNavigation().stop();
         if (phase(creeper) == 2) {
@@ -167,6 +189,38 @@ public final class InfectedCreepers {
             creeper.setDeltaMovement(readVector(creeper, "ransom_creeper_flight"));
             creeper.hasImpulse = true;
         }
+    }
+
+    @SubscribeEvent
+    public static void onHurt(net.minecraftforge.event.entity.living.LivingDamageEvent event) {
+        if (!(event.getEntity() instanceof Creeper creeper) || creeper.level().isClientSide()
+                || !creeper.isAlive() || !isInfected(creeper) || event.getAmount() <= 0 || CrucifixActions.isBanishing(creeper)
+                || com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(creeper.getServer())) return;
+        long now = creeper.level().getGameTime();
+        long remaining = Math.max(0, creeper.getPersistentData().getLong(STOP_END) - now);
+        long extension = Math.max(0, DAMAGE_STOP_TICKS - remaining);
+        if (phase(creeper) == 1) creeper.getPersistentData().putLong(END, creeper.getPersistentData().getLong(END) + extension);
+        if (phase(creeper) == 2) {
+            String flightEnd = "ransom_creeper_flight_end";
+            creeper.getPersistentData().putLong(flightEnd, creeper.getPersistentData().getLong(flightEnd) + extension);
+        }
+        creeper.getPersistentData().putLong(STOP_END, now + DAMAGE_STOP_TICKS);
+        freeze(creeper);
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(creeper,
+                new com.wentory.ransom_in_minecraft.network.ZombieStopPayload(creeper.getUUID(), DAMAGE_STOP_TICKS));
+        creeper.level().playSound(null, creeper.getX(), creeper.getY(), creeper.getZ(),
+                RansomInMinecraft.ZOMBIE_STOP.get(), net.minecraft.sounds.SoundSource.HOSTILE, 1,
+                1 + (creeper.getRandom().nextFloat() - creeper.getRandom().nextFloat()) * .2F);
+    }
+
+    private static void freeze(Creeper creeper) {
+        creeper.getNavigation().stop();
+        creeper.setSwellDir(-1);
+        creeper.setNoGravity(true);
+        creeper.setDeltaMovement(Vec3.ZERO);
+        creeper.setZza(0);
+        creeper.setXxa(0);
+        creeper.hasImpulse = true;
     }
 
     private static double interceptionTime(Vec3 relative, Vec3 velocity) {

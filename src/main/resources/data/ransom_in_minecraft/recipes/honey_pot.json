@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:decorated_pot"
+    },
+    {
+      "item": "minecraft:honey_block"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "item": "ransom_in_minecraft:honey_pot"
+  }
+}

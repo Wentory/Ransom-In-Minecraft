@@ -60,6 +60,16 @@ public final class RansomServerState {
     }
 
     public static void registerPayloads(PayloadRegistrar registrar) {
+        registrar.playToClient(MobBanishmentPayload.TYPE, MobBanishmentPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> CrucifixClientPayloads.accept(payload)));
+        registrar.playToClient(CrucifixCirclePayload.TYPE, CrucifixCirclePayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> CrucifixClientPayloads.accept(payload)));
+        registrar.playToServer(CrucifixUsePayload.TYPE, CrucifixUsePayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof ServerPlayer player && isEncounterActive(player)
+                            && com.wentory.ransom_in_minecraft.CrucifixCircleTest.banish(player))
+                        finishCrucifixRescue(player);
+                }));
         registrar.playToClient(CommonSettingsPayload.TYPE, CommonSettingsPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(payload::accept));
         registrar.playToClient(RansomwareSyncPayload.TYPE, RansomwareSyncPayload.STREAM_CODEC,
@@ -105,6 +115,7 @@ public final class RansomServerState {
                             || !player.createCommandSourceStack().hasPermission(2)
                             && !player.getServer().isSingleplayerOwner(player.getGameProfile())) return;
                     StealerConfig.ENABLED.set(payload.enabled());
+                    StealerConfig.DIFFICULTY.set(payload.difficulty());
                     StealerConfig.INFECTION_CHANCE_PERCENT.set(
                             Math.max(0, Math.min(100, payload.chancePercent())));
                     StealerConfig.SPEC.save();
@@ -267,6 +278,10 @@ public final class RansomServerState {
     }
 
     static int summonRansom(ServerPlayer target) {
+        if (!target.isAlive() || target.isDeadOrDying()) return 0;
+        if (com.wentory.ransom_in_minecraft.CaveRansom.active(target)
+                || com.wentory.ransom_in_minecraft.FullHijack.active(target)) return 0;
+        com.wentory.ransom_in_minecraft.CrucifixRecipe.discover(target);
         if (target.getPersistentData().getBoolean(ACTIVE)) return 0;
         PacketDistributor.sendToPlayer(target, new RansomSummonPayload(true));
         return 1;
@@ -285,7 +300,18 @@ public final class RansomServerState {
         if (ReplayCompatibility.isReplayServer(event.player.getServer())) return;
         if (event.phase != net.minecraftforge.event.TickEvent.Phase.END || !(event.player instanceof ServerPlayer player)) return;
         UUID id = player.getUUID();
+        int cooldown = player.getPersistentData().getInt("ransom_crucifix_spawn_cooldown");
+        if (cooldown > 0) {
+            NATURAL_SPAWN_TIMERS.remove(id);
+            if (player.isAlive()) {
+                if (cooldown == 1) player.getPersistentData().remove("ransom_crucifix_spawn_cooldown");
+                else player.getPersistentData().putInt("ransom_crucifix_spawn_cooldown", cooldown - 1);
+            }
+            return;
+        }
         if (!player.isAlive() || player.getPersistentData().getBoolean(NATURAL_SPAWN_DISABLED)
+                || com.wentory.ransom_in_minecraft.FullHijack.active(player)
+                || com.wentory.ransom_in_minecraft.CaveRansom.active(player)
                 || isEncounterActive(player) || RansomChestGame.hasActiveGame(player)) {
             NATURAL_SPAWN_TIMERS.remove(id);
             return;
@@ -390,6 +416,8 @@ public final class RansomServerState {
         if (source.getBoolean(NATURAL_SPAWN_DISABLED)) {
             target.putBoolean(NATURAL_SPAWN_DISABLED, true);
         }
+        if (source.contains("ransom_crucifix_spawn_cooldown"))
+            target.putInt("ransom_crucifix_spawn_cooldown", source.getInt("ransom_crucifix_spawn_cooldown"));
         if (!source.getBoolean(ACTIVE)) return;
         target.putBoolean(ACTIVE, true);
         target.putInt(COINS, source.getInt(COINS));
@@ -464,6 +492,7 @@ public final class RansomServerState {
     }
 
     private static void lockHands(ServerPlayer player) {
+        com.wentory.ransom_in_minecraft.CrucifixRecipe.discover(player);
         player.getPersistentData().putBoolean(ACTIVE, true);
         LockedInventory previous = LOCKED_PLAYERS.putIfAbsent(player.getUUID(), new LockedInventory(
                 Inventory.isHotbarSlot(player.getInventory().selected) ? player.getInventory().selected : 0));
@@ -471,6 +500,19 @@ public final class RansomServerState {
             PacketDistributor.sendToAllPlayers(new InfectionStatusPayload(player.getUUID(), true));
         }
         player.getInventory().selected = Inventory.getSelectionSize();
+    }
+
+    public static void beginCrucifixSpawnCooldown(ServerPlayer player) {
+        int maximumSeconds = Math.max(RansomwareConfig.NATURAL_SPAWN_MIN_SECONDS.get(),
+                RansomwareConfig.NATURAL_SPAWN_MAX_SECONDS.get());
+        int minutes = (int) Math.ceil(maximumSeconds * .75 / 60.0);
+        player.getPersistentData().putInt("ransom_crucifix_spawn_cooldown", minutes * 60 * 20);
+        NATURAL_SPAWN_TIMERS.remove(player.getUUID());
+    }
+
+    public static void finishCrucifixRescue(ServerPlayer player) {
+        unlockHands(player);
+        PacketDistributor.sendToPlayer(player, new RansomCancelPayload(true));
     }
 
     private static void unlockHands(ServerPlayer player) {
@@ -527,6 +569,9 @@ public final class RansomServerState {
     }
 
     public static boolean isInventorySlotEncrypted(Player player, int inventorySlot) {
+        if (inventorySlot >= 0 && inventorySlot < player.getInventory().getContainerSize()
+                && com.wentory.ransom_in_minecraft.FullHijack.crucifixLocked(player,
+                        player.getInventory().getItem(inventorySlot))) return true;
         if (inventorySlot < 9 || inventorySlot >= 36) return false;
         if (player.level().isClientSide()) return ClientEncryptedSlots.isEncrypted(inventorySlot);
         int mask = player.getPersistentData().getInt(ENCRYPTED_SLOTS);

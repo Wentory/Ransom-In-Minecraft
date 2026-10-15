@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "ransom_in_minecraft.refmap.json",
   "mixins": [
+    "HijackedTargetMixin",
     "HotbarLockMenuMixin",
     "InventoryHotbarLockMixin",
     "EncryptedSlotMixin",
@@ -17,6 +18,10 @@
     "InfectedCreeperDimensionsMixin"
   ],
   "client": [
+    "FullHijackDistortionMixin",
+    "FullHijackSoundMixin",
+    "MobBanishmentRendererMixin",
+    "HijackPostChainAccessor",
     "ItemInHandRendererInvoker",
     "SoundManagerAccessor",
     "SoundEngineAccessor",

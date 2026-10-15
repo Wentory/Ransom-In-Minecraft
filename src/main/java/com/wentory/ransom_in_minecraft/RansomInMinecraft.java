@@ -23,12 +23,20 @@ public class RansomInMinecraft {
     public static final DeferredRegister<SoundEvent> SOUNDS = DeferredRegister.create(ForgeRegistries.SOUND_EVENTS, MODID);
     public static final RegistryObject<SoundEvent> SPAWN = sound("spawn");
     public static final RegistryObject<SoundEvent> JUMPSCARE = sound("jumpscare");
+    public static final RegistryObject<SoundEvent> JUMPSCARE_FAIL = sound("jumpscare_fail");
+    public static final RegistryObject<SoundEvent> JUMPSCARE2_FAIL = sound("jumpscare2_fail");
+    public static final RegistryObject<SoundEvent> CAVE_SHIELD = sound("cave_shield");
+    public static final RegistryObject<SoundEvent> CAVE_SCREAMING = sound("cave_screaming");
+    public static final RegistryObject<SoundEvent> CAVE_GLITCHING2 = sound("cave_glitching2");
+    public static final RegistryObject<SoundEvent> CAVE_TELEPORT = sound("cave_teleport");
+    public static final RegistryObject<SoundEvent> CRUCIFIX_SUCCESS = sound("crucifix_success");
+    public static final RegistryObject<SoundEvent> RANSOM_BANISHMENT_SCREAM = sound("ransom_scream");
+    public static final RegistryObject<SoundEvent> HIJACK_CRUCIFIXED = sound("hijack_crucifixed");
     public static final RegistryObject<SoundEvent> JUMPSCARE2 = sound("jumpscare2");
     public static final RegistryObject<SoundEvent> BOWOMP = sound("bowomp");
     public static final RegistryObject<SoundEvent> SUCCESS = sound("ransom_success");
     public static final RegistryObject<SoundEvent> SOUNDTRACK = sound("soundtrack");
     public static final RegistryObject<SoundEvent> SOUNDTRACK2 = sound("soundtrack2");
-    public static final RegistryObject<SoundEvent> SPAM_ENCOUNTER = sound("spam_encounter");
     public static final RegistryObject<SoundEvent> GLITCH_HIT = sound("glitch_hit");
     public static final RegistryObject<SoundEvent> PICK_COINS = sound("pick_coins");
     public static final RegistryObject<SoundEvent> GOT_COINS = sound("got_coins");
@@ -60,6 +68,9 @@ public class RansomInMinecraft {
     public RansomInMinecraft() {
         IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
         SOUNDS.register(modBus);
+        RansomItems.ITEMS.register(modBus);
+        RansomEffects.EFFECTS.register(modBus);
+        modBus.addListener(RansomItems::addCreativeItems);
         RansomNetwork.register();
         try {
             var dir = net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get();

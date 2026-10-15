@@ -1,5 +1,9 @@
 package com.wentory.ransom_in_minecraft;
 
+import com.wentory.ransom_in_minecraft.network.ReplayCompatibility;
+
+import com.wentory.ransom_in_minecraft.network.PacketDistributor;
+
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.wentory.ransom_in_minecraft.network.WormInfectionPayload;
@@ -18,26 +22,41 @@ import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.TickEvent.PlayerTickEvent;
-import com.wentory.ransom_in_minecraft.network.PacketDistributor;
 
 @EventBusSubscriber(modid = RansomInMinecraft.MODID)
 public final class WormInfection {
     private static final String VALUE = "ransom_worm_infection";
     private static final String RECOVERY = "ransom_worm_recovery_ticks";
     private WormInfection() {}
-    public static int get(ServerPlayer player) { return net.minecraft.util.Mth.clamp(player.getPersistentData().getInt(VALUE), 0, 100); }
+    public static int get(ServerPlayer player) { return com.wentory.ransom_in_minecraft.rules.HijackRules.clamp(player.getPersistentData().getInt(VALUE)); }
     public static int set(ServerPlayer player, int value) {
-        if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(player.getServer())) return get(player);
-        int next = StealerConfig.WORM_ENABLED.get() && player.isAlive() ? net.minecraft.util.Mth.clamp(value, 0, 100) : 0;
+        if (ReplayCompatibility.isReplayServer(player.getServer())) return get(player);
+        int previous = get(player);
+        int next = StealerConfig.WORM_ENABLED.get() && player.isAlive() ? com.wentory.ransom_in_minecraft.rules.HijackRules.clamp(value) : 0;
+        if (next > 0 && player.hasEffect(RansomEffects.FIREWALL.get())) next = 0;
         player.getPersistentData().putInt(VALUE, next);
+        if (FullHijack.active(player)) {
+            CaveRansom.cancelForFullHijack(player);
+            if (com.wentory.ransom_in_minecraft.network.RansomServerState.isEncounterActive(player))
+                com.wentory.ransom_in_minecraft.network.RansomServerState.finishCrucifixRescue(player);
+        }
+        if (!FullHijack.ENABLED || next < 100) FullHijack.clear(player);
         PacketDistributor.sendToPlayer(player, new WormInfectionPayload(next));
+        var visual = new com.wentory.ransom_in_minecraft.network.FullHijackVisualPayload(player.getUUID(), FullHijack.active(player));
+        if ((previous == 100) != (next == 100)) PacketDistributor.sendToPlayersTrackingEntityAndSelf(player, visual);
+        else PacketDistributor.sendToPlayer(player, visual);
         return next;
     }
-    public static void add(ServerPlayer player, int amount) { set(player, get(player) + amount); }
+    public static void add(ServerPlayer player, int amount) {
+        if (amount < 0 && FullHijack.active(player)) return;
+        if (amount > 0 && player.hasEffect(RansomEffects.FIREWALL.get())) return;
+        set(player, get(player) + amount);
+    }
 
     @SubscribeEvent public static void tick(PlayerTickEvent event) {
-        if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(event.player.getServer())) return;
-        if (event.phase != net.minecraftforge.event.TickEvent.Phase.END || !(event.player instanceof ServerPlayer player)) return;
+        if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) return;
+        if (!(event.player instanceof ServerPlayer player)) return;
+        if (ReplayCompatibility.isReplayServer(player.getServer())) return;
         int value = get(player);
         if (!StealerConfig.WORM_ENABLED.get() || !player.isAlive()) {
             if (value != 0) set(player, 0);
@@ -45,6 +64,7 @@ public final class WormInfection {
             return;
         }
         if (value == 0) { player.getPersistentData().remove(RECOVERY); return; }
+        if (FullHijack.active(player)) { player.getPersistentData().remove(RECOVERY); return; }
         int ticks = player.getPersistentData().getInt(RECOVERY) + 1;
         if (ticks >= StealerConfig.WORM_HEAL_TICKS.get()) { add(player, -1); ticks = 0; }
         player.getPersistentData().putInt(RECOVERY, ticks);
@@ -63,6 +83,7 @@ public final class WormInfection {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         if (event.getItem().is(Items.ENCHANTED_GOLDEN_APPLE)) add(player, -50);
         else if (event.getItem().is(Items.GOLDEN_APPLE)) add(player, -20);
+        else if (event.getItem().is(Items.HONEY_BOTTLE)) add(player, -com.wentory.ransom_in_minecraft.rules.ResistanceRules.HONEY_RECOVERY);
     }
     @SubscribeEvent public static void login(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) set(player, get(player));

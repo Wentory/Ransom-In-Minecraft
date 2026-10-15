@@ -17,7 +17,14 @@ public final class GlitchParticles {
     public static void render(PoseStack pose, MultiBufferSource buffers, int seed, float time,
                               int count, float radiusX, float radiusY, float radiusZ, float scale, int alpha,
                               boolean burst) {
-        VertexConsumer consumer = buffers.getBuffer(RansomRenderTypes.boundaryFragments());
+        render(pose, buffers, seed, time, count, radiusX, radiusY, radiusZ, scale, alpha, burst,
+                RansomRenderTypes.boundaryFragments());
+    }
+
+    public static void render(PoseStack pose, MultiBufferSource buffers, int seed, float time,
+                              int count, float radiusX, float radiusY, float radiusZ, float scale, int alpha,
+                              boolean burst, net.minecraft.client.renderer.RenderType type) {
+        VertexConsumer consumer = buffers.getBuffer(type);
         for (int i = 0; i < count; i++) {
             int identity = hash(seed + i * 971);
             float clock = time + Math.floorMod(identity, 12);
