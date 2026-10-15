@@ -2,6 +2,7 @@
   "replace": false,
   "values": [
     "ransom_in_minecraft:ransom_debt",
-    "ransom_in_minecraft:ransom_glitch"
+    "ransom_in_minecraft:ransom_glitch",
+    "ransom_in_minecraft:cave_ransom"
   ]
 }

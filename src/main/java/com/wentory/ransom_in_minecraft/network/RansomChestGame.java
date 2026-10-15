@@ -11,6 +11,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.CompoundContainer;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
@@ -54,6 +55,9 @@ public final class RansomChestGame {
     private static final String INFECTED = "ransom_infected_chest";
     private static final String OWNER = "ransom_infected_owner";
     private static final String SESSION = "ransom_chest_session";
+    private static final String CLEAN = "ransom_crucifix_clean";
+    private static final String CLEANSING_END = "ransom_crucifix_end";
+    private static final Map<ChestBlockEntity, ServerLevel> CLEANSING_CHESTS = new HashMap<>();
     private static final Map<UUID, Session> SESSIONS = new HashMap<>();
 
     public static boolean hasActiveGame(ServerPlayer player) {
@@ -66,6 +70,75 @@ public final class RansomChestGame {
     private static final int INITIAL_OPEN_TICKS = 49;
 
     private RansomChestGame() {
+    }
+
+    @SubscribeEvent
+    public static void strikeWithCrucifix(PlayerInteractEvent.LeftClickBlock event) {
+        if (!(event.getLevel().getBlockEntity(event.getPos()) instanceof ChestBlockEntity clicked)) return;
+        if (clicked.getPersistentData().contains(CLEANSING_END)) {
+            event.setCanceled(true);
+            return;
+        }
+        if (!(event.getEntity() instanceof ServerPlayer player)
+                || !player.getMainHandItem().is(com.wentory.ransom_in_minecraft.RansomItems.CRUCIFIX.get())) return;
+        ServerLevel level = player.serverLevel();
+        BlockState state = level.getBlockState(event.getPos());
+        if (!(state.getBlock() instanceof ChestBlock)) return;
+        var parts = chestParts(level, event.getPos(), state, clicked);
+        if (parts.stream().noneMatch(RansomChestGame::isInfected)) return;
+        event.setCanceled(true);
+        beginCrucifixCleansing(player, event.getPos(), state, parts);
+    }
+
+    private static void beginCrucifixCleansing(ServerPlayer player, BlockPos pos,
+                                              BlockState state, List<ChestBlockEntity> parts) {
+        if (ReplayCompatibility.isReplayServer(player.getServer())) return;
+        if (parts.stream().anyMatch(chest -> chest.getPersistentData().contains(CLEANSING_END))) return;
+        ServerLevel level = player.serverLevel();
+        Session session = findSession(level, parts);
+        if (session != null) {
+            ServerPlayer participant = level.getServer().getPlayerList().getPlayer(session.player);
+            if (participant != null) {
+                RansomPackets.sendToPlayer(participant, new ChestQteAbortPayload(session.id));
+                participant.closeContainer();
+            }
+            SESSIONS.remove(session.player, session);
+        }
+        com.wentory.ransom_in_minecraft.CrucifixActions.damage(player.getMainHandItem(), player, 5,
+                net.minecraft.world.entity.EquipmentSlot.MAINHAND);
+        level.playSound(null, pos, RansomInMinecraft.CRUCIFIX_SUCCESS.get(),
+                SoundSource.PLAYERS, 1.0F, 1.0F);
+        for (ChestBlockEntity chest : parts) {
+            chest.getPersistentData().remove(SESSION);
+            chest.getPersistentData().remove(OWNER);
+            chest.getPersistentData().putLong(CLEANSING_END, level.getGameTime()
+                    + com.wentory.ransom_in_minecraft.CrucifixBanishmentTiming.VISUAL_END);
+            chest.setChanged();
+            CLEANSING_CHESTS.put(chest, level);
+            PENDING_LIDS.removeIf(close -> close.level() == level && close.pos().equals(chest.getBlockPos()));
+            level.blockEvent(chest.getBlockPos(), state.getBlock(), 1, 1);
+            sendCleansingCircle(level, chest, true);
+        }
+    }
+
+    private static void sendCleansingCircle(ServerLevel level, ChestBlockEntity chest, boolean visible) {
+        var pos = chest.getBlockPos();
+        String dimension = level.dimension().location().toString();
+        UUID id = UUID.nameUUIDFromBytes((dimension + ":chest:" + pos.asLong())
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        long start = chest.getPersistentData().getLong(CLEANSING_END)
+                - com.wentory.ransom_in_minecraft.CrucifixBanishmentTiming.VISUAL_END;
+        RansomPackets.sendToAllPlayers(new CrucifixCirclePayload(id, dimension, pos.getX() + 0.5,
+                pos.getY() + 0.63, pos.getZ() + 0.5, start, visible, false, true));
+    }
+
+    private static void finishCleansing(ServerLevel level, ChestBlockEntity chest) {
+        sendCleansingCircle(level, chest, false);
+        chest.getPersistentData().remove(CLEANSING_END);
+        chest.getPersistentData().putBoolean(CLEAN, true);
+        clearInfection(level, List.of(chest));
+        var state = level.getBlockState(chest.getBlockPos());
+        if (state.getBlock() instanceof ChestBlock) level.blockEvent(chest.getBlockPos(), state.getBlock(), 1, 0);
     }
 
     public static void registerPayloads(net.neoforged.neoforge.network.registration.PayloadRegistrar registrar) {
@@ -104,12 +177,30 @@ public final class RansomChestGame {
     @SubscribeEvent
     public static void openChest(PlayerInteractEvent.RightClickBlock event) {
         if (event.getLevel().isClientSide() || !(event.getEntity() instanceof ServerPlayer player)) return;
+        // Leave spectator access and unopened loot-table warnings entirely to vanilla.
+        if (player.isSpectator()) return;
         BlockState state = event.getLevel().getBlockState(event.getPos());
         if (!(state.getBlock() instanceof ChestBlock chestBlock)
                 || !(event.getLevel().getBlockEntity(event.getPos()) instanceof ChestBlockEntity clicked)) return;
 
         List<ChestBlockEntity> chests = chestParts((ServerLevel) event.getLevel(), event.getPos(), state, clicked);
+        for (ChestBlockEntity chest : chests) {
+            if (!chest.getPersistentData().contains(CLEANSING_END)) continue;
+            if (event.getLevel().getGameTime() < chest.getPersistentData().getLong(CLEANSING_END)) {
+                event.setCanceled(true);
+                return;
+            }
+            finishCleansing((ServerLevel) event.getLevel(), chest);
+            CLEANSING_CHESTS.remove(chest);
+        }
         boolean infected = chests.stream().anyMatch(RansomChestGame::isInfected);
+        boolean usingCrucifix = event.getHand() == InteractionHand.MAIN_HAND
+                && player.getMainHandItem().is(com.wentory.ransom_in_minecraft.RansomItems.CRUCIFIX.get());
+        if (infected && usingCrucifix) {
+            event.setCanceled(true);
+            beginCrucifixCleansing(player, event.getPos(), state, chests);
+            return;
+        }
         if (!StealerConfig.ENABLED.get()) {
             if (infected) {
                 Session existing = findSession((ServerLevel) event.getLevel(), chests);
@@ -146,6 +237,7 @@ public final class RansomChestGame {
             return;
         }
         if (!infected && !hasLootTable) return;
+        if (!infected && chests.stream().anyMatch(chest -> chest.getPersistentData().getBoolean(CLEAN))) return;
         if (!infected && ThreadLocalRandom.current().nextInt(100)
                 >= StealerConfig.INFECTION_CHANCE_PERCENT.get()) return;
 
@@ -174,10 +266,15 @@ public final class RansomChestGame {
         SESSIONS.put(player.getUUID(), session);
         markInfected(session, player.getUUID());
         saveSession(session);
+        if (usingCrucifix) {
+            beginCrucifixCleansing(player, event.getPos(), state, chests);
+            return;
+        }
         openSealed(player, session, false);
     }
 
     private static void openSealed(ServerPlayer player, Session session, boolean resumed) {
+        com.wentory.ransom_in_minecraft.CrucifixRecipe.discover(player);
         int rows = session.chests.size() == 2 ? 6 : 3;
         player.openMenu(new SimpleMenuProvider((id, inventory, ignored) ->
                 new SealedChestMenu(id, inventory, rows),
@@ -361,6 +458,23 @@ public final class RansomChestGame {
     public static void tick(ServerTickEvent.Post event) {
         if (ReplayCompatibility.isReplayServer(event.getServer())) return;
         if (event.getServer().getTickCount() % 5 != 0) return;
+        for (var iterator = CLEANSING_CHESTS.entrySet().iterator(); iterator.hasNext();) {
+            var entry = iterator.next();
+            var chest = entry.getKey();
+            var level = entry.getValue();
+            if (level.getServer() != event.getServer() || chest.isRemoved()
+                    || level.getBlockEntity(chest.getBlockPos()) != chest) {
+                sendCleansingCircle(level, chest, false);
+                iterator.remove();
+                continue;
+            }
+            if (level.getGameTime() >= chest.getPersistentData().getLong(CLEANSING_END)) {
+                finishCleansing(level, chest);
+                iterator.remove();
+            } else {
+                level.blockEvent(chest.getBlockPos(), level.getBlockState(chest.getBlockPos()).getBlock(), 1, 1);
+            }
+        }
         if (!StealerConfig.ENABLED.get()) {
             for (Session session : List.copyOf(SESSIONS.values())) {
                 if (session.level.getServer() == event.getServer()) abortSession(session);
@@ -397,6 +511,18 @@ public final class RansomChestGame {
     public static void syncChunkInfections(ChunkWatchEvent.Sent event) {
         for (var blockEntity : event.getChunk().getBlockEntities().values()) {
             if (blockEntity instanceof ChestBlockEntity chest && isInfected(chest)) {
+                if (chest.getPersistentData().contains(CLEANSING_END)) {
+                    if (event.getLevel().getGameTime() >= chest.getPersistentData().getLong(CLEANSING_END)) {
+                        finishCleansing(event.getLevel(), chest);
+                        CLEANSING_CHESTS.remove(chest);
+                    } else {
+                        CLEANSING_CHESTS.put(chest, event.getLevel());
+                        sendCleansingCircle(event.getLevel(), chest, true);
+                        RansomPackets.sendToPlayer(event.getPlayer(), new ChestInfectionPayload(
+                                event.getLevel().dimension().location().toString(), chest.getBlockPos().asLong(), true));
+                    }
+                    continue;
+                }
                 BlockState state = event.getLevel().getBlockState(chest.getBlockPos());
                 if (!StealerConfig.ENABLED.get()) {
                     if (state.getBlock() instanceof ChestBlock)
@@ -416,10 +542,20 @@ public final class RansomChestGame {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void breakInfectedChest(BlockEvent.BreakEvent event) {
+        if (event.getLevel().getBlockEntity(event.getPos()) instanceof ChestBlockEntity chest
+                && chest.getPersistentData().contains(CLEANSING_END)) {
+            event.setCanceled(true);
+            return;
+        }
         if (!event.isCanceled() && event.getLevel() instanceof ServerLevel level) {
             ServerPlayer nearest = destroyInfectedChest(level, event.getPos());
             if (nearest != null) RansomPackets.sendToPlayer(nearest, new RansomForcedAttackPayload(true));
         }
+    }
+
+    @SubscribeEvent
+    public static void clearCleansingState(net.neoforged.neoforge.event.server.ServerStoppedEvent event) {
+        CLEANSING_CHESTS.clear();
     }
 
     @SubscribeEvent
@@ -604,9 +740,7 @@ public final class RansomChestGame {
     }
 
     private static int timeForRound(int length) {
-        int ticks = 0;
-        for (int index = 0; index < length; index++) ticks += index < 5 ? 10 : 12 + (index - 5) * 2;
-        return ticks;
+        return com.wentory.ransom_in_minecraft.rules.QteRules.roundTicks(length, StealerConfig.DIFFICULTY.get());
     }
 
     private static long latencyGraceMillis(ServerPlayer player) {

@@ -1,0 +1,7 @@
+{
+  "targets": ["hijack_distorted"],
+  "passes": [
+    {"name": "ransom_in_minecraft:full_hijack", "intarget": "minecraft:main", "outtarget": "hijack_distorted", "use_linear_filter": true},
+    {"name": "blit", "intarget": "hijack_distorted", "outtarget": "minecraft:main"}
+  ]
+}

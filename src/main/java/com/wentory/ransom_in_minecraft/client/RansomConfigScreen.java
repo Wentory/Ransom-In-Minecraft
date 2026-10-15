@@ -2,6 +2,7 @@ package com.wentory.ransom_in_minecraft.client;
 
 import com.wentory.ransom_in_minecraft.RansomwareConfig;
 import com.wentory.ransom_in_minecraft.StealerConfig;
+import com.wentory.ransom_in_minecraft.rules.QteRules.Difficulty;
 import com.wentory.ransom_in_minecraft.network.RansomwareSettingsPayload;
 import com.wentory.ransom_in_minecraft.network.RansomwareSyncPayload;
 import com.wentory.ransom_in_minecraft.network.StealerSettingsPayload;
@@ -22,6 +23,8 @@ public final class RansomConfigScreen extends Screen {
     private Button deletionButton;
     private Button biomeWhitelistButton;
     private Button stealerButton;
+    private Button difficultyButton;
+    private Difficulty stealerDifficulty;
     private boolean stealerEnabled;
     private boolean canEditStealer;
     private boolean deleteItems;
@@ -57,6 +60,7 @@ public final class RansomConfigScreen extends Screen {
         deleteItems = ransomValue(RansomwareConfig.DELETE_HOTBAR_ON_FAILURE);
         biomeWhitelistEnabled = ransomValue(RansomwareConfig.BIOME_WHITELIST_ENABLED);
         stealerEnabled = serverValue(StealerConfig.ENABLED);
+        stealerDifficulty = serverValue(StealerConfig.DIFFICULTY);
         wormEnabled = serverValue(StealerConfig.WORM_ENABLED);
         rows.clear();
         int fieldX = width / 2 + 42;
@@ -101,17 +105,25 @@ public final class RansomConfigScreen extends Screen {
         stealerButton.active = canEditStealer;
         stealerChanceField = numberField(fieldX, 194, serverValue(StealerConfig.INFECTION_CHANCE_PERCENT));
         stealerChanceField.setEditable(canEditStealer);
+        difficultyButton = addRenderableWidget(Button.builder(difficultyLabel(), button -> {
+            Difficulty[] difficulties = Difficulty.values();
+            stealerDifficulty = difficulties[(stealerDifficulty.ordinal() + 1) % difficulties.length];
+            button.setMessage(difficultyLabel());
+        }).bounds(width / 2 - 128, 216, 256, 18).build());
+        difficultyButton.active = canEditStealer;
+        difficultyButton.setTooltip(Tooltip.create(Component.literal(
+                "Easy gives you a little more time. Hard gives you a little less time.")));
         wormButton = addRenderableWidget(Button.builder(wormLabel(), button -> {
             wormEnabled = !wormEnabled;
             button.setMessage(wormLabel());
-        }).bounds(width / 2 - 128, 216, 256, 18).build());
+        }).bounds(width / 2 - 128, 238, 256, 18).build());
         wormButton.active = canEditStealer;
-        wormHealField = numberField(fieldX, 238, serverValue(StealerConfig.WORM_HEAL_TICKS));
+        wormHealField = numberField(fieldX, 260, serverValue(StealerConfig.WORM_HEAL_TICKS));
         wormHealField.setEditable(canEditStealer);
         wormHealField.setTooltip(Tooltip.create(Component.literal("1 second = 20 ticks. Default: 60 ticks (3 seconds) per Hijack point.")));
-        zombieChanceField = numberField(fieldX, 280, serverValue(StealerConfig.HIJACK_ZOMBIE_CHANCE));
-        drownedChanceField = numberField(fieldX, 302, serverValue(StealerConfig.HIJACK_DROWNED_CHANCE));
-        creeperChanceField = numberField(fieldX, 324, serverValue(StealerConfig.HIJACK_CREEPER_CHANCE));
+        zombieChanceField = numberField(fieldX, 302, serverValue(StealerConfig.HIJACK_ZOMBIE_CHANCE));
+        drownedChanceField = numberField(fieldX, 324, serverValue(StealerConfig.HIJACK_DROWNED_CHANCE));
+        creeperChanceField = numberField(fieldX, 346, serverValue(StealerConfig.HIJACK_CREEPER_CHANCE));
         for (EditBox field : new EditBox[]{zombieChanceField, drownedChanceField, creeperChanceField}) {
             field.setEditable(canEditStealer);
             field.setTooltip(Tooltip.create(Component.literal("Natural spawns only. 0–100%. Default: 5%.")));
@@ -141,7 +153,7 @@ public final class RansomConfigScreen extends Screen {
     private Component wormLabel() { return Component.literal("Ransom Hijack: " + (wormEnabled ? "ON" : "OFF")); }
 
     private void updateScroll() {
-        scroll = Math.clamp(scroll, 0, Math.max(0, 350 - (height - 32)));
+        scroll = Math.clamp(scroll, 0, Math.max(0, 372 - (height - 32)));
         rows.forEach((widget, y) -> {
             widget.setY(y - scroll);
             widget.visible = widget.getY() >= 20 && widget.getY() + widget.getHeight() <= height - 32;
@@ -175,6 +187,10 @@ public final class RansomConfigScreen extends Screen {
         return Component.literal("RANSOM: STEALER: " + (stealerEnabled ? "ON" : "OFF"));
     }
 
+    private Component difficultyLabel() {
+        return Component.literal("Stealer difficulty: " + stealerDifficulty.name());
+    }
+
     private void resetDefaults() {
         if (canEditStealer) {
             resetRansomwareTiming = true;
@@ -193,6 +209,8 @@ public final class RansomConfigScreen extends Screen {
             stealerEnabled = true;
             stealerButton.setMessage(stealerLabel());
             stealerChanceField.setValue("30");
+            stealerDifficulty = Difficulty.NORMAL;
+            difficultyButton.setMessage(difficultyLabel());
             wormEnabled = true;
             wormButton.setMessage(wormLabel());
             wormHealField.setValue("60");
@@ -238,7 +256,8 @@ public final class RansomConfigScreen extends Screen {
             int chance = parse(stealerChanceField, serverValue(StealerConfig.INFECTION_CHANCE_PERCENT), 0, 100);
             if (minecraft.player == null || minecraft.getSingleplayerServer() != null) StealerConfig.ENABLED.set(stealerEnabled);
             if (minecraft.player == null || minecraft.getSingleplayerServer() != null) StealerConfig.INFECTION_CHANCE_PERCENT.set(chance);
-            if (minecraft.player != null) PacketDistributor.sendToServer(new StealerSettingsPayload(stealerEnabled, chance));
+            if (minecraft.player == null || minecraft.getSingleplayerServer() != null) StealerConfig.DIFFICULTY.set(stealerDifficulty);
+            if (minecraft.player != null) PacketDistributor.sendToServer(new StealerSettingsPayload(stealerEnabled, chance, stealerDifficulty));
             int healingTicks = parse(wormHealField, serverValue(StealerConfig.WORM_HEAL_TICKS), 1, 72000);
             StealerConfig.WORM_ENABLED.set(wormEnabled);
             StealerConfig.WORM_HEAL_TICKS.set(healingTicks);
@@ -278,11 +297,11 @@ public final class RansomConfigScreen extends Screen {
         graphics.drawString(font, "Spawn interval to (sec)", labelX, 101, 0xFFFFFFFF, false);
         graphics.drawString(font, "Allowed biomes", labelX, 140, 0xFFFFFFFF, false);
         graphics.drawString(font, "Chest infection chance (%)", labelX, 199, 0xFFFFFFFF, false);
-        graphics.drawString(font, "Hijack recovery interval (ticks)", labelX, 243, 0xFFFFFFFF, false);
-        graphics.drawString(font, "1 second = 20 ticks", labelX, 260, 0xFFAAAAAA, false);
-        graphics.drawString(font, "Hijacked zombie chance (%)", labelX, 285, 0xFFFFFFFF, false);
-        graphics.drawString(font, "Hijacked drowned chance (%)", labelX, 307, 0xFFFFFFFF, false);
-        graphics.drawString(font, "Hijacked creeper chance (%)", labelX, 329, 0xFFFFFFFF, false);
+        graphics.drawString(font, "Hijack recovery interval (ticks)", labelX, 265, 0xFFFFFFFF, false);
+        graphics.drawString(font, "1 second = 20 ticks", labelX, 282, 0xFFAAAAAA, false);
+        graphics.drawString(font, "Hijacked zombie chance (%)", labelX, 307, 0xFFFFFFFF, false);
+        graphics.drawString(font, "Hijacked drowned chance (%)", labelX, 329, 0xFFFFFFFF, false);
+        graphics.drawString(font, "Hijacked creeper chance (%)", labelX, 351, 0xFFFFFFFF, false);
         graphics.pose().popPose();
         graphics.disableScissor();
         resetButton.render(graphics, mouseX, mouseY, partialTick);

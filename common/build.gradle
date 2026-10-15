@@ -1,0 +1,19 @@
+plugins { id 'java-library' }
+java.toolchain.languageVersion = JavaLanguageVersion.of(project.name == '1.20.1' ? 17 : 21)
+configurations { commonJava { canBeResolved = false; canBeConsumed = true } }
+def staged = layout.buildDirectory.dir('sharedJava')
+def stage = tasks.register('stageCommonJava', Sync) {
+    dependsOn 'stonecutterGenerate'
+    from sourceSets.main.java
+    into staged
+}
+artifacts { commonJava(staged) { builtBy stage } }
+tasks.register('rulesTest', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.wentory.ransom_in_minecraft.rules.RuleContractTest'
+    javaLauncher = javaToolchains.launcherFor(java.toolchain)
+}
+tasks.named('check') { dependsOn 'rulesTest' }
+
+tasks.named('test') { enabled = false } // Contract tests run through rulesTest without JUnit.

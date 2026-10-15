@@ -29,9 +29,18 @@ public class RansomInMinecraft {
     public static final DeferredRegister<SoundEvent> SOUNDS = DeferredRegister.create(Registries.SOUND_EVENT, MODID);
     public static final DeferredHolder<SoundEvent, SoundEvent> SPAWN = sound("spawn");
     public static final DeferredHolder<SoundEvent, SoundEvent> JUMPSCARE = sound("jumpscare");
+    public static final DeferredHolder<SoundEvent, SoundEvent> JUMPSCARE_FAIL = sound("jumpscare_fail");
+    public static final DeferredHolder<SoundEvent, SoundEvent> CAVE_SHIELD = sound("cave_shield");
+    public static final DeferredHolder<SoundEvent, SoundEvent> CAVE_SCREAMING = sound("cave_screaming");
+    public static final DeferredHolder<SoundEvent, SoundEvent> CAVE_GLITCHING2 = sound("cave_glitching2");
+    public static final DeferredHolder<SoundEvent, SoundEvent> CAVE_TELEPORT = sound("cave_teleport");
     public static final DeferredHolder<SoundEvent, SoundEvent> JUMPSCARE2 = sound("jumpscare2");
+    public static final DeferredHolder<SoundEvent, SoundEvent> JUMPSCARE2_FAIL = sound("jumpscare2_fail");
     public static final DeferredHolder<SoundEvent, SoundEvent> BOWOMP = sound("bowomp");
     public static final DeferredHolder<SoundEvent, SoundEvent> SUCCESS = sound("ransom_success");
+    public static final DeferredHolder<SoundEvent, SoundEvent> CRUCIFIX_SUCCESS = sound("crucifix_success");
+    public static final DeferredHolder<SoundEvent, SoundEvent> RANSOM_BANISHMENT_SCREAM = sound("ransom_scream");
+    public static final DeferredHolder<SoundEvent, SoundEvent> HIJACK_CRUCIFIXED = sound("hijack_crucifixed");
     public static final DeferredHolder<SoundEvent, SoundEvent> SOUNDTRACK = sound("soundtrack");
     public static final DeferredHolder<SoundEvent, SoundEvent> SOUNDTRACK2 = sound("soundtrack2");
     public static final DeferredHolder<SoundEvent, SoundEvent> SPAM_ENCOUNTER = sound("spam_encounter");
@@ -65,7 +74,11 @@ public class RansomInMinecraft {
 
     public RansomInMinecraft(IEventBus modBus, ModContainer container) {
         SOUNDS.register(modBus);
+        RansomItems.ITEMS.register(modBus);
+        RansomEffects.EFFECTS.register(modBus);
+        modBus.addListener(RansomItems::addCreativeItems);
         modBus.addListener(RansomServerState::registerPayloads);
+        modBus.addListener(CaveRansom::register);
         migrateRansomwareConfig();
         container.registerConfig(ModConfig.Type.COMMON, RansomwareConfig.SPEC,
                 RANSOMWARE_CONFIG_FILE);

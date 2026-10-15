@@ -54,6 +54,11 @@ public final class InfectedPlayerGlitchRenderer {
         if (renderingSlicePass) return;
         if (!(event.getEntity() instanceof AbstractClientPlayer player)) return;
         UUID playerId = player.getUUID();
+        if (com.wentory.ransom_in_minecraft.network.ClientFullHijackTracker.contains(playerId)) {
+            STATES.remove(playerId);
+            ClientPlayerGlitchTracker.consumeHit(playerId);
+            return;
+        }
         if (player.isDeadOrDying()) {
             STATES.remove(playerId);
             ClientPlayerGlitchTracker.consumeHit(playerId);

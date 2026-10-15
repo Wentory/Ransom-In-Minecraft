@@ -48,13 +48,17 @@ public final class InfectedCreeperVisuals {
         return ResourceLocation.fromNamespaceAndPath(RansomInMinecraft.MODID, "textures/" + path);
     }
     public static void accept(WormCreeperPayload payload) {
-        PHASES.put(payload.entityId(), payload.phase());
+        if (payload.phase() < 0) {
+            PHASES.remove(payload.entityId());
+            LAST_POSITIONS.remove(payload.entityId());
+        } else PHASES.put(payload.entityId(), payload.phase());
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
         for (var entity : mc.level.entitiesForRendering()) {
             if (entity instanceof Creeper creeper && entity.getUUID().equals(payload.entityId())) {
                 Vec3 center = creeper.getBoundingBox().getCenter();
-                creeper.getPersistentData().putInt("ransom_creeper_phase", payload.phase());
+                if (payload.phase() < 0) creeper.getPersistentData().remove("ransom_creeper_phase");
+                else creeper.getPersistentData().putInt("ransom_creeper_phase", payload.phase());
                 creeper.refreshDimensions();
                 creeper.setPos(center.x, center.y - creeper.getBbHeight() * 0.5D, center.z);
                 break;
@@ -80,6 +84,10 @@ public final class InfectedCreeperVisuals {
         String dimension = mc.level.dimension().location().toString();
         for (var entity : mc.level.entitiesForRendering()) {
             if (!(entity instanceof Creeper creeper) || phase(creeper.getUUID()) != 2) continue;
+            if (com.wentory.ransom_in_minecraft.network.ClientInfectedZombies.stopRemaining(creeper.getUUID(), 0) > 0) {
+                LAST_POSITIONS.remove(creeper.getUUID());
+                continue;
+            }
             Vec3 center = creeper.getBoundingBox().getCenter();
             Vec3 previous = LAST_POSITIONS.put(creeper.getUUID(), center);
             if (previous == null) previous = center;
@@ -104,17 +112,8 @@ public final class InfectedCreeperVisuals {
         @Override public void render(PoseStack pose, MultiBufferSource buffers, int light, Creeper creeper,
                                      float swing, float amount, float partial, float age, float yaw, float pitch) {
             if (phase(creeper.getUUID()) < 0 || creeper.isInvisible() || creeper.isDeadOrDying()) return;
-            pose.pushPose();
-            pose.scale(1.035F, 1.035F, 1.035F);
-            getParentModel().renderToBuffer(pose, buffers.getBuffer(RenderType.entityTranslucent(getTextureLocation(creeper))),
-                    light, OverlayTexture.NO_OVERLAY, 0x76FF1010);
-            pose.popPose();
-            pose.pushPose();
-            pose.scale(1.055F, 1.055F, 1.055F);
-            var animated = new AnimatedSheetVertexConsumer(buffers.getBuffer(RenderType.entityTranslucentEmissive(GLITCH)),
-                    creeper.tickCount / 2, 6);
-            getParentModel().renderToBuffer(pose, animated, 0x00F000F0, OverlayTexture.NO_OVERLAY, 0xCCFFFFFF);
-            pose.popPose();
+            HijackedMobSurface.render(getParentModel(), getTextureLocation(creeper), pose, buffers,
+                    light, creeper.tickCount, 0x76FF1010);
         }
     }
 
@@ -147,6 +146,13 @@ public final class InfectedCreeperVisuals {
         pose.translate(0, creeper.getBbHeight() * 0.5D, 0);
         fragments(pose, event.getMultiBufferSource(), creeper.getUUID().hashCode(), 14, 0.9F);
         pose.popPose();
+        InfectedZombieVisuals.renderStop(event, creeper);
+    }
+
+    @SubscribeEvent
+    public static void stoppedBody(RenderLivingEvent.Post<?, ?> event) {
+        if (event.getEntity() instanceof Creeper creeper && phase(creeper.getUUID()) >= 0
+                && phase(creeper.getUUID()) < 2) InfectedZombieVisuals.renderStop(event, creeper);
     }
 
     @SubscribeEvent public static void clouds(RenderLevelStageEvent event) {

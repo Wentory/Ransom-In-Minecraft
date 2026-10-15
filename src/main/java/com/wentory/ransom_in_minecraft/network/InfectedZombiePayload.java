@@ -8,12 +8,13 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.UUID;
 
-public record InfectedZombiePayload(UUID zombieId) implements CustomPacketPayload {
+public record InfectedZombiePayload(UUID zombieId, boolean infected) implements CustomPacketPayload {
+    public InfectedZombiePayload(UUID zombieId) { this(zombieId, true); }
     public static final Type<InfectedZombiePayload> TYPE = new Type<>(
             ResourceLocation.fromNamespaceAndPath(RansomInMinecraft.MODID, "infected_zombie"));
     public static final StreamCodec<RegistryFriendlyByteBuf, InfectedZombiePayload> STREAM_CODEC = StreamCodec.of(
-            (buffer, payload) -> buffer.writeUUID(payload.zombieId()),
-            buffer -> new InfectedZombiePayload(buffer.readUUID()));
+            (buffer, payload) -> { buffer.writeUUID(payload.zombieId()); buffer.writeBoolean(payload.infected()); },
+            buffer -> new InfectedZombiePayload(buffer.readUUID(), buffer.readBoolean()));
 
     @Override
     public Type<? extends CustomPacketPayload> type() {

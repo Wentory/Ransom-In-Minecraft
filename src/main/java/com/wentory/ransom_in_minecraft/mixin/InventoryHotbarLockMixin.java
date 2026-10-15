@@ -15,7 +15,7 @@ public abstract class InventoryHotbarLockMixin {
         Inventory inventory = (Inventory) (Object) this;
         if (!RansomServerState.isHotbarLocked(inventory.player)
                 && !RansomServerState.hasEncryptedInventorySlots(inventory.player)) return;
-        for (int slot = Inventory.getSelectionSize(); slot < 36; slot++) {
+        for (int slot = Inventory.getSelectionSize() + 1; slot < 36; slot++) {
             if (!RansomServerState.isInventorySlotEncrypted(inventory.player, slot)
                     && inventory.getItem(slot).isEmpty()) {
                 cir.setReturnValue(slot);
@@ -30,7 +30,8 @@ public abstract class InventoryHotbarLockMixin {
         Inventory inventory = (Inventory) (Object) this;
         if (!RansomServerState.isHotbarLocked(inventory.player)
                 && !RansomServerState.hasEncryptedInventorySlots(inventory.player)) return;
-        for (int slot = Inventory.getSelectionSize(); slot < 36; slot++) {
+
+        for (int slot = Inventory.getSelectionSize() + 1; slot < 36; slot++) {
             if (RansomServerState.isInventorySlotEncrypted(inventory.player, slot)) continue;
             ItemStack existing = inventory.getItem(slot);
             if (ItemStack.isSameItemSameComponents(existing, incoming)

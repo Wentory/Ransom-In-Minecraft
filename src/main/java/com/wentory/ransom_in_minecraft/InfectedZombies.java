@@ -1,5 +1,7 @@
 package com.wentory.ransom_in_minecraft;
 
+import com.wentory.ransom_in_minecraft.network.ReplayCompatibility;
+
 import com.wentory.ransom_in_minecraft.network.RansomPackets;
 
 import com.wentory.ransom_in_minecraft.network.InfectedZombiePayload;
@@ -65,6 +67,13 @@ public final class InfectedZombies {
 
     public static boolean isBeingInfected(Mob mob) { return mob.getPersistentData().hasUUID(WORM_SOURCE); }
 
+    public static void releaseBanishmentVictim(Zombie zombie) {
+        Mob victim = null;
+        if (zombie.level() instanceof ServerLevel level && zombie.getPersistentData().hasUUID(WORM_TARGET)
+                && level.getEntity(zombie.getPersistentData().getUUID(WORM_TARGET)) instanceof Mob mob) victim = mob;
+        abortInfection(zombie, victim);
+    }
+
     private static boolean canInfect(Mob mob) {
         return !isBeingInfected(mob) && (isSupportedZombie(mob) && mob instanceof Zombie zombie && !isInfected(zombie)
                 || mob instanceof Creeper creeper && !InfectedCreepers.isInfected(creeper));
@@ -120,10 +129,11 @@ public final class InfectedZombies {
 
     @SubscribeEvent
     public static void onJoin(EntityJoinLevelEvent event) {
-        if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(event.getLevel().getServer())) return;
+        if (ReplayCompatibility.isReplayServer(event.getLevel().getServer())) return;
         if (event.getLevel().isClientSide() || !(event.getEntity() instanceof Mob mob)) return;
         if (isBeingInfected(mob)) releaseVictim(mob);
         if (!(mob instanceof Zombie zombie)) return;
+        if (CrucifixActions.isBanishing(zombie)) return;
         // An interrupted session cannot leave a loaded victim frozen indefinitely.
         if (zombie.getPersistentData().hasUUID(WORM_SOURCE)) releaseVictim(zombie);
         zombie.getPersistentData().remove(WORM_TARGET);
@@ -165,6 +175,7 @@ public final class InfectedZombies {
     public static void onTick(EntityTickEvent.Post event) {
         if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(event.getEntity().getServer())) return;
         if (!(event.getEntity() instanceof Mob mob) || mob.level().isClientSide()) return;
+        if (ReplayCompatibility.isReplayServer(mob.getServer())) return;
         if (isBeingInfected(mob)) {
             tickVictim(mob);
             return;
@@ -214,6 +225,10 @@ public final class InfectedZombies {
         }
 
         LivingEntity target = worm.getTarget();
+        if (target instanceof Player player && FullHijack.active(player)) {
+            worm.setTarget(null);
+            target = null;
+        }
         if (now % 10 == worm.getId() % 10 || target == null || !target.isAlive()
                 || target instanceof Mob mob && !canInfect(mob)
                 || worm.distanceToSqr(target) > 35.0D * 35.0D) {
@@ -263,6 +278,7 @@ public final class InfectedZombies {
     private static LivingEntity findTarget(ServerLevel level, Zombie worm) {
         Player player = level.getEntitiesOfClass(Player.class, worm.getBoundingBox().inflate(35.0D),
                 candidate -> candidate.isAlive() && !candidate.isSpectator() && !candidate.isCreative()
+                        && !FullHijack.active(candidate)
                         && worm.getSensing().hasLineOfSight(candidate))
                 .stream().min(Comparator.comparingDouble(worm::distanceToSqr)).orElse(null);
         if (player != null) return player;
@@ -277,6 +293,7 @@ public final class InfectedZombies {
     private static Player nearbyPlayer(ServerLevel level, Zombie zombie, double distance) {
         return level.getEntitiesOfClass(Player.class, zombie.getBoundingBox().inflate(distance),
                 player -> player.isAlive() && !player.isSpectator() && !player.isCreative()
+                        && !FullHijack.active(player)
                         && zombie.distanceToSqr(player) <= distance * distance)
                 .stream().findFirst().orElse(null);
     }

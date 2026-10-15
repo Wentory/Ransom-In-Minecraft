@@ -1,5 +1,7 @@
 package com.wentory.ransom_in_minecraft.client;
 
+import com.wentory.ransom_in_minecraft.network.ReplayCompatibility;
+
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.wentory.ransom_in_minecraft.RansomInMinecraft;
@@ -35,7 +37,7 @@ public final class WormEffects {
     private static final Random RANDOM = new Random();
     private static final ResourceLocation GLITCH = ResourceLocation.fromNamespaceAndPath(RansomInMinecraft.MODID, "textures/glitch2.png");
     private WormEffects() {}
-    public static void accept(int infection) { value = Math.clamp(infection, 0, 100); if (value < 75) releaseMovement(); }
+    public static void accept(int infection) { value = com.wentory.ransom_in_minecraft.rules.HijackRules.clamp(infection); if (value < 75) releaseMovement(); }
     public static void clear() { value = 0; tick = 0; nextImpulse = 0; duplicate = null; releaseMovement(); }
     public static boolean illusion(LivingEntity mob) {
         if (mob instanceof Zombie && ClientInfectedZombies.contains(mob.getUUID())
@@ -56,13 +58,13 @@ public final class WormEffects {
 
     @SubscribeEvent public static void tick(ClientTickEvent.Pre event) {
         Minecraft mc = Minecraft.getInstance();
-        if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(mc.getSingleplayerServer())) {
+        if (ReplayCompatibility.isReplayServer(mc.getSingleplayerServer())) {
             releaseMovement();
             return;
         }
         if (mc.isPaused()) return;
         tick++;
-        if (value < 75 || mc.player == null || !mc.player.isAlive() || mc.screen != null) {
+        if (value < 75 || FullHijackClient.active() || mc.player == null || !mc.player.isAlive() || mc.screen != null) {
             releaseMovement(); duplicate = null; nextImpulse = tick + 100; return;
         }
         if (forcedMovement != null) {
@@ -99,6 +101,7 @@ public final class WormEffects {
     }
 
     @SubscribeEvent public static void falseHud(RenderGuiLayerEvent.Pre event) {
+        if (FullHijackClient.active() || FullHijackClient.exiting()) return;
         Minecraft mc = Minecraft.getInstance();
         if (value == 0 || mc.player == null || mc.player.isCreative() || mc.player.isSpectator()) return;
         boolean health = event.getName().equals(VanillaGuiLayers.PLAYER_HEALTH);

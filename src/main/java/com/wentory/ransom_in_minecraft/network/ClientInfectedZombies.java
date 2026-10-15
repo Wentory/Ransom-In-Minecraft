@@ -28,7 +28,8 @@ public final class ClientInfectedZombies {
     private ClientInfectedZombies() {}
 
     public static void accept(InfectedZombiePayload payload) {
-        INFECTED.add(payload.zombieId());
+        if (payload.infected()) INFECTED.add(payload.zombieId());
+        else remove(payload.zombieId());
     }
 
     public static boolean contains(UUID zombieId) {

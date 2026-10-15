@@ -16,6 +16,16 @@ public abstract class HotbarLockMenuMixin {
     @Inject(method = "clicked", at = @At("HEAD"), cancellable = true)
     private void ransom$lockHotbar(int slotId, int button, ClickType clickType, Player player, CallbackInfo ci) {
         AbstractContainerMenu menu = (AbstractContainerMenu) (Object) this;
+        if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer
+                && !com.wentory.ransom_in_minecraft.FullHijack.inventoryAllowed(serverPlayer)) {
+            ci.cancel();
+            return;
+        }
+        if (clickType == ClickType.SWAP && button >= 0 && button < player.getInventory().getContainerSize()
+                && com.wentory.ransom_in_minecraft.FullHijack.crucifixLocked(player, player.getInventory().getItem(button))) {
+            ci.cancel();
+            return;
+        }
         boolean hotbarLocked = RansomServerState.isHotbarLocked(player);
         boolean clickedHotbar = hotbarLocked && slotId >= 0 && slotId < menu.slots.size()
                 && isPlayerHotbar(menu.getSlot(slotId), player);

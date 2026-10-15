@@ -2,7 +2,7 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'idea'
-    id 'net.neoforged.moddev' version '2.0.146'
+    id 'net.neoforged.moddev' version '2.0.147'
 }
 
 version = mod_version
@@ -142,4 +142,12 @@ idea {
         downloadSources = true
         downloadJavadoc = true
     }
+}
+
+// Shared source consumption follows the MultiLoader Template approach.
+configurations { commonJava { canBeResolved = true; canBeConsumed = false } }
+dependencies { commonJava project(path: ':common:1.21.1', configuration: 'commonJava') }
+tasks.named('compileJava', JavaCompile) {
+    dependsOn configurations.commonJava
+    source configurations.commonJava
 }

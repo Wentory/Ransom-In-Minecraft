@@ -12,23 +12,24 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import java.util.Map;
+import com.wentory.ransom_in_minecraft.rules.QteRules.Difficulty;
 
 @EventBusSubscriber(modid = RansomInMinecraft.MODID)
 public record CommonSettingsPayload(boolean stealer, int chestChance, boolean hijack, int recovery,
-                                    int zombie, int drowned, int creeper) implements CustomPacketPayload {
+                                    int zombie, int drowned, int creeper, Difficulty difficulty) implements CustomPacketPayload {
     public static final Type<CommonSettingsPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(RansomInMinecraft.MODID, "common_settings"));
     public static final StreamCodec<RegistryFriendlyByteBuf, CommonSettingsPayload> STREAM_CODEC = StreamCodec.of(
             (b, p) -> { b.writeBoolean(p.stealer); b.writeVarInt(p.chestChance); b.writeBoolean(p.hijack);
-                b.writeVarInt(p.recovery); b.writeVarInt(p.zombie); b.writeVarInt(p.drowned); b.writeVarInt(p.creeper); },
+                b.writeVarInt(p.recovery); b.writeVarInt(p.zombie); b.writeVarInt(p.drowned); b.writeVarInt(p.creeper); b.writeEnum(p.difficulty); },
             b -> new CommonSettingsPayload(b.readBoolean(), b.readVarInt(), b.readBoolean(), b.readVarInt(),
-                    b.readVarInt(), b.readVarInt(), b.readVarInt()));
+                    b.readVarInt(), b.readVarInt(), b.readVarInt(), b.readEnum(Difficulty.class)));
     private static Map<ModConfigSpec.ConfigValue<?>, Object> remoteValues = Map.of();
     @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     public void accept() {
         remoteValues = Map.of(StealerConfig.ENABLED, stealer, StealerConfig.INFECTION_CHANCE_PERCENT, chestChance,
                 StealerConfig.WORM_ENABLED, hijack, StealerConfig.WORM_HEAL_TICKS, recovery,
                 StealerConfig.HIJACK_ZOMBIE_CHANCE, zombie, StealerConfig.HIJACK_DROWNED_CHANCE, drowned,
-                StealerConfig.HIJACK_CREEPER_CHANCE, creeper);
+                StealerConfig.HIJACK_CREEPER_CHANCE, creeper, StealerConfig.DIFFICULTY, difficulty);
     }
     @SuppressWarnings("unchecked")
     public static <T> T remoteValue(ModConfigSpec.ConfigValue<T> value) {
@@ -38,7 +39,7 @@ public record CommonSettingsPayload(boolean stealer, int chestChance, boolean hi
         return new CommonSettingsPayload(StealerConfig.ENABLED.get(), StealerConfig.INFECTION_CHANCE_PERCENT.get(),
                 StealerConfig.WORM_ENABLED.get(), StealerConfig.WORM_HEAL_TICKS.get(),
                 StealerConfig.HIJACK_ZOMBIE_CHANCE.get(), StealerConfig.HIJACK_DROWNED_CHANCE.get(),
-                StealerConfig.HIJACK_CREEPER_CHANCE.get());
+                StealerConfig.HIJACK_CREEPER_CHANCE.get(), StealerConfig.DIFFICULTY.get());
     }
     @SubscribeEvent public static void login(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) RansomPackets.sendToPlayer(player, current());

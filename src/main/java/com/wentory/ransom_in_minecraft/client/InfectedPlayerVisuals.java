@@ -43,6 +43,12 @@ public final class InfectedPlayerVisuals {
                            float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
             if (player.isInvisible() || player.isDeadOrDying()) return;
 
+            if (com.wentory.ransom_in_minecraft.network.ClientFullHijackTracker.contains(player.getUUID())) {
+                HijackedMobSurface.render(getParentModel(), player.getSkin().texture(), poseStack, buffers,
+                        packedLight, player.tickCount, 0xFFFF1010, 0xFFFFFFFF);
+                return;
+            }
+
             boolean infected = ClientInfectionTracker.isInfected(player.getUUID());
             float extraGlitch = InfectedPlayerGlitchRenderer.extraGlitchStrength(player);
             float success = InfectedPlayerGlitchRenderer.successStrength(player);

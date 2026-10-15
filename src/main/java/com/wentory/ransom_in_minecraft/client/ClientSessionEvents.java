@@ -23,33 +23,42 @@ public final class ClientSessionEvents {
     public static void loggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         RansomwareSyncPayload.clear();
         RansomEncounter.handleDisconnect(Minecraft.getInstance());
+        CaveRansomClient.clear();
         ClientRansomResumeTracker.clear();
         ClientInfectionTracker.clear();
         ClientInfectedZombies.clear();
         InfectedCreeperVisuals.clear();
         WormEffects.clear();
+        FullHijackClient.clear();
+        com.wentory.ransom_in_minecraft.network.ClientFullHijackTracker.clear();
         ClientPlayerGlitchTracker.clear();
         ClientPlayerVisualEffectTracker.clear();
         InfectedPlayerGlitchRenderer.clear();
+        CrucifixCircleRenderer.clear();
         RansomChestVisuals.clear();
         RansomChestScreen.clear();
     }
 
     @SubscribeEvent
     public static void loggingIn(ClientPlayerNetworkEvent.LoggingIn event) {
+        CaveRansomClient.clear();
         ClientInfectionTracker.clear();
         ClientInfectedZombies.clear();
         InfectedCreeperVisuals.clear();
         WormEffects.clear();
+        FullHijackClient.clear();
+        com.wentory.ransom_in_minecraft.network.ClientFullHijackTracker.clear();
         ClientPlayerGlitchTracker.clear();
         ClientPlayerVisualEffectTracker.clear();
         InfectedPlayerGlitchRenderer.clear();
+        CrucifixCircleRenderer.clear();
         RansomChestVisuals.clear();
         RansomChestScreen.clear();
     }
 
     @SubscribeEvent
     public static void entityLeft(EntityLeaveLevelEvent event) {
+        if (event.getLevel().isClientSide()) com.wentory.ransom_in_minecraft.network.ClientFullHijackTracker.remove(event.getEntity().getUUID());
         if (event.getLevel().isClientSide()) InfectedCreeperVisuals.remove(event.getEntity().getUUID());
         if (event.getLevel().isClientSide()) {
             ClientInfectedZombies.remove(event.getEntity().getUUID());

@@ -1,0 +1,95 @@
+{
+	"format_version": "1.9.0",
+	"credit": "Made with Blockbench",
+	"textures": {
+		"0": "ransom_in_minecraft:item/crucifix/circle_3",
+		"1": "ransom_in_minecraft:item/crucifix/moon",
+		"2": "ransom_in_minecraft:item/crucifix/circle_1",
+		"3": "ransom_in_minecraft:item/crucifix/circle_2",
+		"particle": "ransom_in_minecraft:item/crucifix/circle_3"
+	},
+	"elements": [
+		{
+			"from": [-4.2, 1.7, -4.3],
+			"to": [20.3, 1.7, 20.2],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 1.1, 8]},
+			"faces": {
+				"north": {"uv": [0, 0, 16, 16], "texture": "#1"},
+				"east": {"uv": [0, 0, 16, 16], "texture": "#1"},
+				"south": {"uv": [0, 0, 16, 16], "texture": "#1"},
+				"west": {"uv": [0, 0, 16, 16], "texture": "#1"},
+				"up": {"uv": [0, 0, 16, 16], "texture": "#1"},
+				"down": {"uv": [0, 0, 16, 16], "texture": "#1"}
+			}
+		},
+		{
+			"from": [-4.2, 1.6, -4.3],
+			"to": [20.3, 1.6, 20.2],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 1, 8]},
+			"faces": {
+				"north": {"uv": [0, 0, 16, 16], "texture": "#2"},
+				"east": {"uv": [0, 0, 16, 16], "texture": "#2"},
+				"south": {"uv": [0, 0, 16, 16], "texture": "#2"},
+				"west": {"uv": [0, 0, 16, 16], "texture": "#2"},
+				"up": {"uv": [0, 0, 16, 16], "texture": "#2"},
+				"down": {"uv": [0, 0, 16, 16], "texture": "#2"}
+			}
+		},
+		{
+			"from": [-4.2, 0.7, -4.3],
+			"to": [20.3, 0.7, 20.2],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 0.7, 8]},
+			"faces": {
+				"north": {"uv": [0, 0, 16, 16], "texture": "#3"},
+				"east": {"uv": [0, 0, 16, 16], "texture": "#3"},
+				"south": {"uv": [0, 0, 16, 16], "texture": "#3"},
+				"west": {"uv": [0, 0, 16, 16], "texture": "#3"},
+				"up": {"uv": [0, 0, 16, 16], "texture": "#3"},
+				"down": {"uv": [0, 0, 16, 16], "texture": "#3"}
+			}
+		},
+		{
+			"from": [-4.2, 1.2, -4.3],
+			"to": [20.3, 1.2, 20.2],
+			"rotation": {"angle": 45, "axis": "y", "origin": [8, 0.8, 8]},
+			"faces": {
+				"north": {"uv": [0, 0, 16, 16], "texture": "#0"},
+				"east": {"uv": [0, 0, 16, 16], "texture": "#0"},
+				"south": {"uv": [0, 0, 16, 16], "texture": "#0"},
+				"west": {"uv": [0, 0, 16, 16], "texture": "#0"},
+				"up": {"uv": [0, 0, 16, 16], "texture": "#0"},
+				"down": {"uv": [0, 0, 16, 16], "texture": "#0"}
+			}
+		}
+	],
+	"groups": [
+		{
+			"name": "moon",
+			"origin": [8, 1.1, 8],
+			"scope": 0,
+			"color": 0,
+			"children": [0]
+		},
+		{
+			"name": "circle_1",
+			"origin": [8, 1, 8],
+			"scope": 0,
+			"color": 0,
+			"children": [1]
+		},
+		{
+			"name": "circle_2",
+			"origin": [8, 0.7, 8],
+			"scope": 0,
+			"color": 0,
+			"children": [2]
+		},
+		{
+			"name": "circle_3",
+			"origin": [8, 0.8, 8],
+			"scope": 0,
+			"color": 0,
+			"children": [3]
+		}
+	]
+}
