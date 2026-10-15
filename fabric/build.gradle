@@ -31,6 +31,16 @@ dependencies {
 }
 
 sourceSets.main.resources.srcDir '../common/src/main/resources'
+sourceSets.main.java.srcDir '../common/src/main/java'
+sourceSets.test.java.srcDir '../common/src/test/java'
+tasks.register('rulesTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.wentory.ransom_in_minecraft.rules.RuleContractTest'
+}
+tasks.named('check') { dependsOn tasks.named('rulesTest') }
+// The contract suite is a standalone main, run by rulesTest rather than JUnit.
+tasks.named('test') { enabled = false }
 
 def resourceVersion = mod_version
 processResources {

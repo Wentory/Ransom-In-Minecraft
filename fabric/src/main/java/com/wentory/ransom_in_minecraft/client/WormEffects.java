@@ -39,7 +39,7 @@ public final class WormEffects {
         return value >= 50 && mob instanceof Mob && Math.floorMod(hash(mob.getUUID().hashCode() ^ tick / 100), 7) == 0;
     }
 
-    public static boolean hasFalseHud() { return value > 0; }
+    public static boolean hasFalseHud() { return value > 0 && !FullHijackClient.active() && !FullHijackClient.exiting(); }
 
     private static void releaseMovement() {
         if (forcedMovement != null) {
@@ -55,6 +55,7 @@ public final class WormEffects {
     public static void tick(ClientTickEvent.Pre event) {
         Minecraft mc = Minecraft.getInstance();
         if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(mc.getSingleplayerServer())) { releaseMovement(); duplicate = null; return; }
+        if (FullHijackClient.active() || FullHijackClient.exiting()) { releaseMovement(); duplicate = null; return; }
         if (mc.isPaused()) return;
         tick++;
         if (value < 75 || mc.player == null || !mc.player.isAlive() || mc.gui.screen() != null) {
@@ -118,6 +119,7 @@ public final class WormEffects {
 
     public static void overlay(RenderGuiEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
+        if (FullHijackClient.active() || FullHijackClient.exiting()) return;
         if (value < 25 || mc.player == null || !mc.player.isAlive()) return;
         GuiGraphicsExtractor g = event.getGuiGraphics();
         int width = g.guiWidth(), height = g.guiHeight();

@@ -8,6 +8,24 @@ import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Hud.class)
 public abstract class FabricHudMixin {
+    // Run after vanilla's F1-filtered layers so the encounter cannot be hidden with F1.
+    @Inject(method="extractRenderState",at=@At("TAIL"))
+    private void ransom$encounter(GuiGraphicsExtractor graphics,net.minecraft.client.DeltaTracker delta,CallbackInfo ci) {
+        com.wentory.ransom_in_minecraft.client.RansomEncounter.render(
+                new com.wentory.ransom_in_minecraft.platform.FabricEvents.RenderGuiEvent.Post(graphics));
+    }
+
+    @Inject(method={"extractHotbarAndDecorations","extractCrosshair","extractEffects",
+            "extractBossOverlay","extractScoreboardSidebar"},at=@At("HEAD"),cancellable=true)
+    private void ransom$hideHud(GuiGraphicsExtractor graphics,net.minecraft.client.DeltaTracker delta,CallbackInfo ci){
+        if(com.wentory.ransom_in_minecraft.client.FullHijackClient.active()
+                || com.wentory.ransom_in_minecraft.client.FullHijackClient.exiting()) ci.cancel();
+    }
+    @Inject(method={"extractPlayerHealth","extractVehicleHealth","extractSelectedItemName"},at=@At("HEAD"),cancellable=true)
+    private void ransom$hideHealth(GuiGraphicsExtractor graphics,CallbackInfo ci){
+        if(com.wentory.ransom_in_minecraft.client.FullHijackClient.active()
+                || com.wentory.ransom_in_minecraft.client.FullHijackClient.exiting()) ci.cancel();
+    }
     @Inject(method="extractHearts",at=@At("HEAD"),cancellable=true)
     private void ransom$hearts(GuiGraphicsExtractor graphics,Player player,int x,int y,int rowHeight,int offset,
                                float maxHealth,int health,int oldHealth,int absorption,boolean blink,CallbackInfo ci){

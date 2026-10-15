@@ -1,4 +1,18 @@
 {
+  "cave_shield": { "sounds": ["ransom_in_minecraft:shield"] },
+  "cave_glitching2": { "sounds": ["ransom_in_minecraft:glitching2"] },
+  "cave_teleport": { "sounds": [{ "name": "ransom_in_minecraft:teleport", "attenuation_distance": 48 }] },
+  "cave_screaming": { "sounds": [{ "name": "ransom_in_minecraft:screaming", "attenuation_distance": 48 }] },
+  "hijack_soundtrack": { "sounds": [{ "name": "ransom_in_minecraft:hijackgame/soundtrack", "stream": true }] },
+  "hijack_white_noise": { "sounds": [{ "name": "ransom_in_minecraft:hijackgame/white_noise", "stream": true }] },
+  "hijack_ring": { "sounds": ["ransom_in_minecraft:hijackgame/ring"] },
+  "hijack_ring_success": { "sounds": ["ransom_in_minecraft:hijackgame/ring_success"] },
+  "hijack_ring_fail": { "sounds": ["ransom_in_minecraft:hijackgame/ring_fail"] },
+  "hijack_target_teleport": { "sounds": ["ransom_in_minecraft:hijackgame/target_teleport"] },
+  "hijack_cursor_teleport": { "sounds": ["ransom_in_minecraft:hijackgame/cursor_teleport"] },
+  "crucifix_success": { "sounds": [{ "name": "ransom_in_minecraft:crucifix/success", "stream": true, "attenuation_distance": 32 }] },
+  "ransom_scream": { "sounds": [{ "name": "ransom_in_minecraft:crucifix/ransom_scream", "stream": true, "attenuation_distance": 32 }] },
+  "hijack_crucifixed": { "sounds": [{ "name": "ransom_in_minecraft:crucifix/hijack_crucifixed", "attenuation_distance": 32 }] },
   "creeper_trail": { "sounds": ["ransom_in_minecraft:creeper/trail"] },
   "creeper_charge": { "sounds": [{ "name": "ransom_in_minecraft:creeper/charge", "attenuation_distance": 50 }] },
   "creeper_explode": { "sounds": ["ransom_in_minecraft:creeper/explode"] },
@@ -15,7 +29,9 @@
   "zombie_stop": { "sounds": ["ransom_in_minecraft:zombie/stop"] },
   "spawn": { "sounds": ["ransom_in_minecraft:spawn"] },
   "jumpscare": { "sounds": ["ransom_in_minecraft:jumpscare"] },
+  "jumpscare_fail": { "sounds": ["ransom_in_minecraft:jumpscare_fail"] },
   "jumpscare2": { "sounds": ["ransom_in_minecraft:jumpscare2"] },
+  "jumpscare2_fail": { "sounds": ["ransom_in_minecraft:jumpscare2_fail"] },
   "bowomp": { "sounds": ["ransom_in_minecraft:bowomp"] },
   "ransom_success": { "sounds": ["ransom_in_minecraft:ransom_success"] },
   "glitch_hit": { "sounds": ["ransom_in_minecraft:glitch_hit"] },
@@ -43,11 +59,6 @@
   "soundtrack2": {
     "sounds": [
       { "name": "ransom_in_minecraft:soundtrack2", "stream": true }
-    ]
-  },
-  "spam_encounter": {
-    "sounds": [
-      { "name": "ransom_in_minecraft:spam_encounter", "stream": true }
     ]
   }
 }

@@ -1,4 +1,9 @@
 package com.wentory.ransom_in_minecraft;
+import com.wentory.ransom_in_minecraft.network.ZombieStopPayload;
+import com.wentory.ransom_in_minecraft.network.ReplayCompatibility;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import com.wentory.ransom_in_minecraft.network.RansomPackets;
+
 
 import com.wentory.ransom_in_minecraft.network.WormCreeperPayload;
 import com.wentory.ransom_in_minecraft.network.WormCloudPayload;
@@ -33,7 +38,39 @@ public final class InfectedCreepers {
     private static final String END = "ransom_creeper_rise_end";
     private static final Identifier RANGE_ID = Identifier.fromNamespaceAndPath(
             RansomInMinecraft.MODID, "infected_creeper_detection_range");
+    private static final String STOP_END="ransom_creeper_stop_end";
+    private static final int DAMAGE_STOP_TICKS=100;
     private InfectedCreepers() {}
+    @SubscribeEvent
+public static void onHurt(LivingDamageEvent.Post event) {
+        if (!(event.getEntity() instanceof Creeper creeper) || creeper.level().isClientSide()
+                || !creeper.isAlive() || !isInfected(creeper) || event.getHealthDamage() <= 0
+                || CrucifixActions.isBanishing(creeper) || ReplayCompatibility.isReplayServer(creeper.level().getServer())) return;
+        long now = creeper.level().getGameTime();
+        long remaining = Math.max(0, creeper.getPersistentData().getLongOr(STOP_END, 0L) - now);
+        long extension = Math.max(0, DAMAGE_STOP_TICKS - remaining);
+        // Keep ascent/flight timers paused rather than letting them expire during STOP.
+        if (phase(creeper) == 1) creeper.getPersistentData().putLong(END, creeper.getPersistentData().getLongOr(END, 0L) + extension);
+        if (phase(creeper) == 2) {
+            String flightEnd = "ransom_creeper_flight_end";
+            creeper.getPersistentData().putLong(flightEnd, creeper.getPersistentData().getLongOr(flightEnd, 0L) + extension);
+        }
+        creeper.getPersistentData().putLong(STOP_END, now + DAMAGE_STOP_TICKS);
+        freeze(creeper);
+        RansomPackets.sendToPlayersTrackingEntityAndSelf(creeper, new ZombieStopPayload(creeper.getUUID(), DAMAGE_STOP_TICKS));
+        creeper.level().playSound(null, creeper.getX(), creeper.getY(), creeper.getZ(),
+                RansomInMinecraft.ZOMBIE_STOP.get(), net.minecraft.sounds.SoundSource.HOSTILE, 1,
+                1 + (creeper.getRandom().nextFloat() - creeper.getRandom().nextFloat()) * .2F);
+    }
+private static void freeze(Creeper creeper) {
+        creeper.getNavigation().stop();
+        creeper.setSwellDir(-1);
+        creeper.setNoGravity(true);
+        creeper.setDeltaMovement(Vec3.ZERO);
+        creeper.setZza(0);
+        creeper.setXxa(0);
+        creeper.needsSync = true;
+    }
 
     public static boolean isInfected(Creeper creeper) { return creeper.getPersistentData().getBooleanOr(INFECTED, false); }
     public static int phase(Creeper creeper) { return creeper.getPersistentData().getIntOr(PHASE, 0); }
@@ -58,7 +95,7 @@ public final class InfectedCreepers {
         creeper.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(creeper, Player.class, true) {
             @Override public boolean canContinueToUse() {
                 return creeper.getTarget() instanceof Player player && player.isAlive()
-                        && !player.isCreative() && !player.isSpectator() && player.level() == creeper.level();
+                        && !player.isCreative() && !player.isSpectator() && !FullHijack.active(player) && player.level() == creeper.level();
             }
         });
         creeper.getNavigation().stop();
@@ -87,15 +124,35 @@ public final class InfectedCreepers {
     @SubscribeEvent public static void tracking(PlayerEvent.StartTracking event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         if (event.getTarget() instanceof Creeper creeper && isInfected(creeper)) {
-            com.wentory.ransom_in_minecraft.network.RansomPackets.sendToPlayer(player, new WormCreeperPayload(creeper.getUUID(), phase(creeper)));
+            RansomPackets.sendToPlayer(player, new WormCreeperPayload(creeper.getUUID(), phase(creeper)));
+            int remaining = (int) Math.max(0, creeper.getPersistentData().getLongOr(STOP_END, 0L) - creeper.level().getGameTime());
+            if (remaining > 0) RansomPackets.sendToPlayer(player, new ZombieStopPayload(creeper.getUUID(), remaining));
         }
     }
 
     @SubscribeEvent public static void tick(EntityTickEvent.Post event) {
         if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(event.getEntity().level().getServer())) return;
         if (event.getEntity().level().isClientSide()) return;
+        if (ReplayCompatibility.isReplayServer(event.getEntity().level().getServer())) return;
         if (!(event.getEntity() instanceof Creeper creeper) || !creeper.isAlive() || !isInfected(creeper)) return;
+        if (CrucifixActions.isBanishing(creeper)) return;
         if (InfectedZombies.isBeingInfected(creeper)) return;
+        if (creeper.level().getGameTime() < creeper.getPersistentData().getLongOr(STOP_END, 0L)) {
+            freeze(creeper);
+            return;
+        }
+        if (creeper.getPersistentData().contains(STOP_END)) {
+            creeper.getPersistentData().remove(STOP_END);
+            creeper.setNoGravity(phase(creeper) != 0);
+        }
+        if (creeper.getTarget() instanceof Player captured && FullHijack.active(captured)) {
+            creeper.setTarget(null);
+            creeper.getPersistentData().putInt(PHASE, 0);
+            creeper.refreshDimensions();
+            creeper.setNoGravity(false);
+            creeper.setDeltaMovement(Vec3.ZERO);
+            sync(creeper);
+        }
         creeper.setSwellDir(-1);
         creeper.getNavigation().stop();
         if (phase(creeper) == 2) {
@@ -130,7 +187,7 @@ public final class InfectedCreepers {
                     readVector(creeper, "ransom_creeper_velocity").lerp(movement, 0.5D));
             storeVector(creeper, "ransom_creeper_sample", player.position());
             creeper.setDeltaMovement(0, 0.1D, 0);
-            if (now >= creeper.getPersistentData().getLongOr(END, 0)) {
+            if (now >= creeper.getPersistentData().getLongOr(END, 0L)) {
                 Vec3 center = creeper.getBoundingBox().getCenter();
                 creeper.getPersistentData().putInt(PHASE, 2);
                 creeper.refreshDimensions();

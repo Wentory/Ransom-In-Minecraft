@@ -34,14 +34,8 @@ public final class WormIllusionLayers {
  DeferredBuffers buffers = new DeferredBuffers(collector);
  getParentModel().setupAnim(state);
             if (!WormEffects.illusion(entity) || entity.isInvisible() || entity.isDeadOrDying()) return;
-            pose.pushPose();
-            pose.scale(1.04F, 1.04F, 1.04F);
-            getParentModel().renderToBuffer(pose, buffers.getBuffer(net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(((LivingEntityRenderer) net.minecraft.client.Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(entity)).getTextureLocation(state))),
-                    light, OverlayTexture.NO_OVERLAY, 0x90FF0808);
-            pose.scale(1.015F, 1.015F, 1.015F);
-            var noise = new AnimatedSheetVertexConsumer(buffers.getBuffer(net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucentEmissive(GLITCH)), entity.tickCount / 2, 6);
-            getParentModel().renderToBuffer(pose, noise, 0x00F000F0, OverlayTexture.NO_OVERLAY, 0xCCFFFFFF);
-            pose.popPose();
+            var renderer=(LivingEntityRenderer)net.minecraft.client.Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(entity);
+            HijackedMobSurface.render(getParentModel(),renderer.getTextureLocation(state),pose,buffers,light,entity.tickCount,0x90FF0808);
             buffers.endBatch();
         }
     }

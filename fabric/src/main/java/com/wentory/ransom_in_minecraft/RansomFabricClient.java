@@ -27,7 +27,10 @@ public final class RansomFabricClient implements ClientModInitializer {
                 ClientSessionEvents.loggingOut(new com.wentory.ransom_in_minecraft.platform.FabricEvents.ClientPlayerNetworkEvent.LoggingOut()));
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents.ENTITY_UNLOAD.register((entity,level) ->
                 ClientSessionEvents.entityLeft(new com.wentory.ransom_in_minecraft.platform.FabricEvents.EntityLeaveLevelEvent(entity,level)));
+        com.wentory.ransom_in_minecraft.client.CaveRansomClient.initialize();
+        com.wentory.ransom_in_minecraft.client.CrucifixCircleRenderer.initialize();
         InfectedPlayerVisuals.initialize();
+        com.wentory.ransom_in_minecraft.client.FullHijackClient.initialize();
         com.wentory.ransom_in_minecraft.client.InfectedZombieLayers.initialize();
         com.wentory.ransom_in_minecraft.client.InfectedCreeperVisuals.Layers.initialize();
         com.wentory.ransom_in_minecraft.client.WormIllusionLayers.initialize();
@@ -37,6 +40,9 @@ public final class RansomFabricClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             var event=new com.wentory.ransom_in_minecraft.platform.FabricEvents.ClientTickEvent.Post();
             RansomEncounter.clientTick(event);
+            com.wentory.ransom_in_minecraft.client.CaveRansomClient.tick();
+            com.wentory.ransom_in_minecraft.client.MoonlightEffects.tick();
+            com.wentory.ransom_in_minecraft.client.FullHijackClient.tick(event);
             com.wentory.ransom_in_minecraft.client.RansomChestVisuals.tick(event);
             com.wentory.ransom_in_minecraft.client.InfectedCreeperVisuals.trailTick(event);
         });
@@ -44,15 +50,21 @@ public final class RansomFabricClient implements ClientModInitializer {
                 (graphics, delta) -> {
                     var event=new com.wentory.ransom_in_minecraft.platform.FabricEvents.RenderGuiEvent.Post(graphics);
                     com.wentory.ransom_in_minecraft.client.WormEffects.overlay(event);
-                    RansomEncounter.render(event);
+                    com.wentory.ransom_in_minecraft.client.CaveRansomClient.hud(graphics);
+                    com.wentory.ransom_in_minecraft.client.CrucifixActivationFlash.render(graphics);
                 });
         ScreenEvents.AFTER_INIT.register((client, screen, width, height) ->
-                ScreenEvents.afterExtract(screen).register((current, graphics, mouseX, mouseY, delta) ->
-                        RansomEncounter.renderInventoryHotbarLock(new com.wentory.ransom_in_minecraft.platform.FabricEvents.ScreenEvent.Render.Post(current, graphics))));
+                ScreenEvents.afterExtract(screen).register((current, graphics, mouseX, mouseY, delta) -> {
+                    var event = new com.wentory.ransom_in_minecraft.platform.FabricEvents.ScreenEvent.Render.Post(current, graphics);
+                    RansomEncounter.renderInventoryHotbarLock(event);
+                    com.wentory.ransom_in_minecraft.client.FullHijackClient.inventoryRender(event);
+                }));
         LevelRenderEvents.COLLECT_SUBMITS.register(context -> {
             var event=new com.wentory.ransom_in_minecraft.platform.FabricEvents.SubmitCustomGeometryEvent(
                     context.poseStack(), context.submitNodeCollector(), context.levelState());
             RansomEncounter.renderInfectedBlocks(event);
+            com.wentory.ransom_in_minecraft.client.CrucifixCircleRenderer.submit(context.poseStack(),context.submitNodeCollector(),context.levelState());
+            com.wentory.ransom_in_minecraft.client.CaveRansomClient.render(context.poseStack(),context.submitNodeCollector(),context.levelState());
             com.wentory.ransom_in_minecraft.client.RansomChestVisuals.render(event);
             com.wentory.ransom_in_minecraft.client.InfectedCreeperVisuals.clouds(event);
         });

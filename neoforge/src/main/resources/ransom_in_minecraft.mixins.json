@@ -4,6 +4,7 @@
   "package": "com.wentory.ransom_in_minecraft.mixin",
   "compatibilityLevel": "JAVA_25",
   "mixins": [
+    "HijackedTargetMixin",
     "InventorySelectionAccessor",
     "HotbarLockMenuMixin",
     "InventoryHotbarLockMixin",
@@ -17,6 +18,17 @@
     "InfectedCreeperDimensionsMixin"
   ],
   "client": [
+    "CrucifixSpatialSoundMixin",
+    "FirewallHudMixin",
+    "MobBanishmentRendererMixin",
+    "FullHijackSoundMixin",
+    "FullHijackDistortionMixin",
+    "HijackedInputAccessor",
+    "HijackGuiStateAccessor",
+    "HijackPostChainAccessor",
+    "HijackPostPassAccessor",
+    "RansomPipelineRegistry",
+    "HoneyPotInventoryUseMixin",
     "ItemInHandRendererInvoker",
     "SoundManagerAccessor",
     "SoundEngineAccessor",

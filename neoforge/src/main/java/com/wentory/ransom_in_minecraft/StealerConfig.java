@@ -1,6 +1,7 @@
 package com.wentory.ransom_in_minecraft;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
+import com.wentory.ransom_in_minecraft.rules.QteRules.Difficulty;
 
 public final class StealerConfig {
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
@@ -12,6 +13,10 @@ public final class StealerConfig {
             .comment("Chance in percent that an unopened loot-table chest becomes infected on its first opening attempt. 0 disables random infection; 100 infects every eligible chest.")
             .defineInRange("stealer.infectionChancePercent", 30, 0, 100);
 
+    public static final ModConfigSpec.EnumValue<Difficulty> DIFFICULTY = BUILDER
+            .comment("Stealer difficulty: EASY adds 0.4 seconds for the first key and 0.1 for keys 2 and 3. NORMAL preserves original timing. HARD removes 0.1 seconds for each of the first three keys.")
+            .defineEnum("stealer.difficulty", Difficulty.NORMAL);
+
     public static final ModConfigSpec.BooleanValue WORM_ENABLED = BUILDER
             .comment("Enable player infection by Ransom: Worm. Disabling clears accumulated infection.")
             .define("worm.enabled", true);
@@ -21,13 +26,13 @@ public final class StealerConfig {
 
     public static final ModConfigSpec.IntValue HIJACK_ZOMBIE_CHANCE = BUILDER
             .comment("Percent chance for a naturally spawned zombie to be Hijacked. 0 disables; 100 always.")
-            .defineInRange("hijack.zombieSpawnChancePercent", 5, 0, 100);
+            .defineInRange("hijack.zombieSpawnChancePercent", 2, 0, 100);
     public static final ModConfigSpec.IntValue HIJACK_DROWNED_CHANCE = BUILDER
             .comment("Percent chance for a naturally spawned drowned to be Hijacked. Does not affect conversion or infection.")
-            .defineInRange("hijack.drownedSpawnChancePercent", 5, 0, 100);
+            .defineInRange("hijack.drownedSpawnChancePercent", 2, 0, 100);
     public static final ModConfigSpec.IntValue HIJACK_CREEPER_CHANCE = BUILDER
             .comment("Percent chance for a naturally spawned creeper to be Hijacked.")
-            .defineInRange("hijack.creeperSpawnChancePercent", 5, 0, 100);
+            .defineInRange("hijack.creeperSpawnChancePercent", 2, 0, 100);
 
     public static final ModConfigSpec SPEC = BUILDER.build();
 

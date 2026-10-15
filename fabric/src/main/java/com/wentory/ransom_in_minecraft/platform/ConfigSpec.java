@@ -50,6 +50,9 @@ public final class ConfigSpec {
     public static final class BooleanValue extends ConfigValue<Boolean> {
         BooleanValue(boolean value) { super(value, Boolean::parseBoolean); }
     }
+    public static final class EnumValue<T extends Enum<T>> extends ConfigValue<T> {
+        EnumValue(T value) { super(value, raw -> Enum.valueOf(value.getDeclaringClass(), raw.toUpperCase(Locale.ROOT))); }
+    }
     public static final class Builder {
         private final Map<String,ConfigValue<?>> values=new LinkedHashMap<>();
         public Builder comment(String... comment) { return this; }
@@ -57,6 +60,7 @@ public final class ConfigSpec {
         public IntValue defineInRange(String key,int value,int min,int max) { return add(key,new IntValue(value,min,max)); }
         public DoubleValue defineInRange(String key,double value,double min,double max) { return add(key,new DoubleValue(value,min,max)); }
         public BooleanValue define(String key,boolean value) { return add(key,new BooleanValue(value)); }
+        public <T extends Enum<T>> EnumValue<T> defineEnum(String key,T value) { return add(key,new EnumValue<>(value)); }
         public ConfigValue<String> define(String key,String value) { return add(key,new ConfigValue<>(value, s -> s)); }
         public ConfigSpec build() { return new ConfigSpec(values); }
     }

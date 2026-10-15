@@ -380,14 +380,15 @@ public final class RansomChestScreen extends ContainerScreen {
     }
 
     private static int timeForKey(int index) {
-        if (index < 5) return 10;
-        return 12 + (index - 5) * 2;
+        return com.wentory.ransom_in_minecraft.rules.QteRules.keyTicks(index,
+                com.wentory.ransom_in_minecraft.network.CommonSettingsPayload.remoteValue(
+                        com.wentory.ransom_in_minecraft.StealerConfig.DIFFICULTY));
     }
 
     private static int timeForRound(int keyCount) {
-        int total = 0;
-        for (int index = 0; index < keyCount; index++) total += timeForKey(index);
-        return total;
+        return com.wentory.ransom_in_minecraft.rules.QteRules.roundTicks(keyCount,
+                com.wentory.ransom_in_minecraft.network.CommonSettingsPayload.remoteValue(
+                        com.wentory.ransom_in_minecraft.StealerConfig.DIFFICULTY));
     }
 
     private void beginEnding() {

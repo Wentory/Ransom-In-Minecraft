@@ -47,6 +47,7 @@ public final class InfectedPlayerGlitchRenderer {
     public static void beforePlayerRender(RenderPlayerEvent.Pre event) {
         if (renderingSlicePass) return;
         if (!(RenderStateEntities.get(event.getRenderState()) instanceof AbstractClientPlayer player)) return;
+        if(com.wentory.ransom_in_minecraft.network.ClientFullHijackTracker.contains(player.getUUID()))return;
         UUID playerId = player.getUUID();
         if (player.isDeadOrDying()) {
             STATES.remove(playerId);
@@ -83,6 +84,7 @@ public final class InfectedPlayerGlitchRenderer {
         if (renderingSlicePass) return;
         if (!(RenderStateEntities.get(event.getRenderState()) instanceof AbstractClientPlayer player)) return;
         if (player.isDeadOrDying()) return;
+        if(com.wentory.ransom_in_minecraft.network.ClientFullHijackTracker.contains(player.getUUID()))return;
         VisualState state = STATES.get(player.getUUID());
         if (state == null) return;
         if (state.stopStartTick != Integer.MIN_VALUE) {

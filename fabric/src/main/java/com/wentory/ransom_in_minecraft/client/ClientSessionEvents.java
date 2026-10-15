@@ -15,9 +15,16 @@ public final class ClientSessionEvents {
     private ClientSessionEvents() {}
 
     public static void loggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        FullHijackMusic.logout();
         RansomEncounter.handleDisconnect(Minecraft.getInstance());
         ClientRansomResumeTracker.clear();
         com.wentory.ransom_in_minecraft.network.RansomwareSyncPayload.clear();
+        com.wentory.ransom_in_minecraft.network.ClientFullHijackTracker.clear();
+        CrucifixCircleRenderer.clear();
+        MobBanishmentVisuals.clear();
+        CrucifixActivationFlash.clear();
+        FullHijackClient.clear();
+        CaveRansomClient.clear();
         ClientInfectionTracker.clear();
         ClientInfectedZombies.clear();
         InfectedCreeperVisuals.clear();
@@ -30,6 +37,13 @@ public final class ClientSessionEvents {
     }
 
     public static void loggingIn(ClientPlayerNetworkEvent.LoggingIn event) {
+        FullHijackMusic.login();
+        com.wentory.ransom_in_minecraft.network.ClientFullHijackTracker.clear();
+        CrucifixCircleRenderer.clear();
+        MobBanishmentVisuals.clear();
+        CrucifixActivationFlash.clear();
+        FullHijackClient.clear();
+        CaveRansomClient.clear();
         ClientInfectionTracker.clear();
         ClientInfectedZombies.clear();
         InfectedCreeperVisuals.clear();

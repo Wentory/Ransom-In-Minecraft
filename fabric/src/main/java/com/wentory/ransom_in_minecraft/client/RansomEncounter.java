@@ -1,4 +1,5 @@
 package com.wentory.ransom_in_minecraft.client;
+import com.wentory.ransom_in_minecraft.network.ReplayCompatibility;
 import com.wentory.ransom_in_minecraft.network.RansomwareSyncPayload;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -144,6 +145,10 @@ public final class RansomEncounter {
     private static boolean forcedRansomware;
     private static SimpleSoundInstance soundtrack;
     private static SimpleSoundInstance jumpscareSound;
+    private static SimpleSoundInstance spawnSound;
+    private static boolean caveEncounter;
+    private static final int CAVE_RELEASE_TICK = 40;
+    private static final int CAVE_ERROR_TICK = 30;
     private static Double savedMusicVolume;
     private static float warningStartX;
     private static float warningStartY;
@@ -156,6 +161,61 @@ public final class RansomEncounter {
     private static boolean victoryPending;
     private static int coinTargetX;
     private static int coinTargetY;
+
+    private static boolean hasCrucifix(Minecraft minecraft) {
+        if (minecraft.player == null) {
+            return false;
+        }
+        var inventory = minecraft.player.getInventory();
+        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+            if (inventory.getItem(slot).is(com.wentory.ransom_in_minecraft.RansomItems.CRUCIFIX.get())) {
+                return true;
+            }
+        }
+        return false;
+    }
+    private static boolean shouldExitUnderwater(Minecraft minecraft) {
+        if (minecraft.player.isUnderWater()) return true;
+        BlockPos aboveHead = BlockPos.containing(minecraft.player.getEyePosition());
+        for (int offset = 1; offset <= 2; offset++) {
+            if (minecraft.level.getFluidState(aboveHead.above(offset)).is(net.minecraft.tags.FluidTags.WATER)) return true;
+        }
+        return false;
+    }
+    private static void reset(boolean notifyServer) {
+        Phase previousPhase = phase;
+        Minecraft minecraft = Minecraft.getInstance();
+        if (notifyServer) setServerRansomState(minecraft, false, false, 0);
+        if (minecraft.player != null && !Inventory.isHotbarSlot(minecraft.player.getInventory().getSelectedSlot())) {
+            ((com.wentory.ransom_in_minecraft.mixin.InventorySelectionAccessor)minecraft.player.getInventory()).ransom$setSelectedSlot(lockedSlot);
+        }
+        phase = Phase.IDLE;
+        forcedRansomware = false;
+        phaseTicks = 0;
+        coins = 0;
+        displayedCoins = 0;
+        clearCoinEffects(minecraft);
+        POPUPS.clear();
+        extractionTicks = 0;
+        extracting = null;
+        INFECTED.clear();
+        GLITCH_BLOCKS.clear();
+        infectionCenter = null;
+        if (previousPhase != Phase.FAILED) stopJumpscare(Minecraft.getInstance());
+        if (!respawnRansomPending) stopSoundtrack(Minecraft.getInstance());
+        restoreMinecraftMusic(minecraft);
+        sendPlayerVisualEffect(PlayerVisualEffectPayload.CLEAR);
+    }
+    private static void playJumpscare(Minecraft minecraft) {
+        stopSpawn(minecraft);
+        minecraft.getSoundManager().play(jumpscareSound);
+    }
+    private static void stopSpawn(Minecraft minecraft) {
+        if (spawnSound != null) {
+            minecraft.getSoundManager().stop(spawnSound);
+            spawnSound = null;
+        }
+    }
 
     private RansomEncounter() {
     }
@@ -202,7 +262,7 @@ public final class RansomEncounter {
 
     public static void clientTick(ClientTickEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (com.wentory.ransom_in_minecraft.network.ReplayCompatibility.isReplayServer(minecraft.getSingleplayerServer())) return;
+        if (ReplayCompatibility.isReplayServer(minecraft.getSingleplayerServer())) return;
         if (forcedRansomware && phase != Phase.IDLE) ClientRansomResumeTracker.consumeForcedAttack();
         boolean glitchHit = ClientEncryptedSlots.consumeGlitchHit();
         if (glitchHit) {
@@ -219,29 +279,36 @@ public final class RansomEncounter {
             respawnPhaseTicks = serverResume.phaseTicks();
             respawnRansomPending = true;
         }
-        if (minecraft.player != null && !RansomChestScreen.isActive() && phase == Phase.IDLE
+        // Discard new attack requests on the death screen; keep only the existing ransom resume.
+        boolean deathScreen = minecraft.player != null && (minecraft.player.isDeadOrDying()
+                || minecraft.gui.screen() instanceof net.minecraft.client.gui.screens.DeathScreen);
+        if (deathScreen || respawnRansomPending) {
+            ClientRansomResumeTracker.consumeForcedAttack();
+            ClientRansomResumeTracker.consumeSummon();
+        }
+        if (!deathScreen && !respawnRansomPending && minecraft.player != null && !RansomChestScreen.isActive() && phase == Phase.IDLE
                 && ClientRansomResumeTracker.consumeForcedAttack()) {
             startWarning(minecraft);
             forcedRansomware = true;
             startJumpscare(minecraft);
             return;
         }
-        if (minecraft.player != null && !RansomChestScreen.isActive()
+        if (!deathScreen && !respawnRansomPending && minecraft.player != null && !RansomChestScreen.isActive()
                 && phase == Phase.IDLE && ClientRansomResumeTracker.consumeSummon()) {
             startWarning(minecraft);
             return;
         }
-        var failureScare = minecraft.player != null ? ClientRansomResumeTracker.consumeFailureScare() : null;
+        var failureScare = minecraft.player != null && !deathScreen ? ClientRansomResumeTracker.consumeFailureScare() : null;
         if (failureScare != null) {
             respawnRansomPending = false;
             pendingFailureCoins = failureScare.coins();
             pendingFailureDeleteHotbar = failureScare.deleteHotbar();
             phase = Phase.FAILED;
             phaseTicks = 0;
-            minecraft.setScreenAndShow(null);
+            minecraft.gui.setScreen(null);
             stopJumpscare(minecraft);
             jumpscareSound = SimpleSoundInstance.forUI(RansomFabric.JUMPSCARE2.get(), 1.0F, 1.0F);
-            minecraft.getSoundManager().play(jumpscareSound);
+            playJumpscare(minecraft);
             sendPlayerVisualEffect(PlayerVisualEffectPayload.CHAOS);
             return;
         }
@@ -270,7 +337,7 @@ public final class RansomEncounter {
             reset();
             return;
         }
-        if (minecraft.isPaused()) return;
+        if (deathScreen || minecraft.isPaused()) return;
 
         tickCoinEffects(minecraft);
 
@@ -284,10 +351,10 @@ public final class RansomEncounter {
             respawnRecoveryScare = true;
             phase = Phase.JUMPSCARE;
             phaseTicks = 0;
-            minecraft.setScreenAndShow(null);
+            minecraft.gui.setScreen(null);
             setServerRansomState(minecraft, true, false, 0);
             jumpscareSound = SimpleSoundInstance.forUI(RansomFabric.JUMPSCARE.get(), 1.0F, 1.0F);
-            minecraft.getSoundManager().play(jumpscareSound);
+            playJumpscare(minecraft);
             return;
         }
 
@@ -297,6 +364,21 @@ public final class RansomEncounter {
         switch (phase) {
             case WARNING -> tickWarning(minecraft);
             case JUMPSCARE -> {
+                if (phaseTicks == 18 && hasCrucifix(minecraft)) {
+                    infectionPreflightDone = true;
+                    underwaterExit = shouldExitUnderwater(minecraft);
+                    if (!underwaterExit) infectNearbyBlocks(minecraft);
+                    if (underwaterExit || !hasViableInfection()) {
+                        respawnRecoveryScare = false;
+                        startEmptyAreaExit(minecraft);
+                        break;
+                    }
+                    CrucifixActivationFlash.start(minecraft);
+                }
+                if (phaseTicks == 20 && hasCrucifix(minecraft)
+                        && infectionPreflightDone && !underwaterExit && hasViableInfection()) {
+                    net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new com.wentory.ransom_in_minecraft.network.CrucifixUsePayload());
+                }
                 if (respawnRecoveryScare && phaseTicks >= jumpscareEndTick()) {
                     respawnRecoveryScare = false;
                     stopJumpscare(minecraft);
@@ -308,20 +390,20 @@ public final class RansomEncounter {
                 } else if (!respawnRecoveryScare && !infectionPreflightDone
                         && phaseTicks >= jumpscareEndTick()) {
                     infectionPreflightDone = true;
-                    underwaterExit = minecraft.player.isUnderWater();
-                    BlockPos aboveHead = BlockPos.containing(minecraft.player.getEyePosition());
-                    for (int offset = 1; offset <= 2 && !underwaterExit; offset++) {
-                        underwaterExit = minecraft.level.getFluidState(aboveHead.above(offset))
-                                .is(net.minecraft.tags.FluidTags.WATER);
-                    }
+                    underwaterExit = shouldExitUnderwater(minecraft);
                     if (underwaterExit) {
                         startEmptyAreaExit(minecraft);
                     } else {
                         infectNearbyBlocks(minecraft);
                         if (!forcedRansomware && !hasViableInfection()) startEmptyAreaExit(minecraft);
                     }
-                } else if (!respawnRecoveryScare && phaseTicks >= downloadEndTick()) {
-                    startRansom(minecraft);
+                } else if (!respawnRecoveryScare && phaseTicks >= (caveEncounter ? CAVE_RELEASE_TICK : downloadEndTick())) {
+                    if (caveEncounter && !underwaterExit && hasViableInfection()
+                            && com.wentory.ransom_in_minecraft.CaveRansomEnvironment.isCave(minecraft.player)) {
+                        CaveRansomClient.keepIntroTail();
+                        reset(false);
+                        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new com.wentory.ransom_in_minecraft.network.CaveRansomInput(true));
+                    } else startRansom(minecraft);
                 }
             }
             case RANSOM -> tickRansom(minecraft);
@@ -352,7 +434,8 @@ public final class RansomEncounter {
 
     private static void tickWarning(Minecraft minecraft) {
         if (phaseTicks == WARNING_STOP_TICK) {
-            play(minecraft, RansomFabric.SPAWN.get(), 1.0F, 1.0F);
+            spawnSound = SimpleSoundInstance.forUI(RansomFabric.SPAWN.get(), 1.0F, 1.0F);
+            minecraft.getSoundManager().play(spawnSound);
             sendPlayerVisualEffect(PlayerVisualEffectPayload.STOP);
         }
         double mouseX = minecraft.mouseHandler.xpos();
@@ -560,6 +643,11 @@ public final class RansomEncounter {
     }
 
     private static void startWarning(Minecraft minecraft) {
+        if (minecraft.player == null || !minecraft.player.isAlive()
+                || minecraft.gui.screen() instanceof net.minecraft.client.gui.screens.DeathScreen) return;
+        if (FullHijackClient.active()) return;
+        if (CaveRansomClient.active()) return;
+        caveEncounter = com.wentory.ransom_in_minecraft.CaveRansomEnvironment.isCave(minecraft.player);
         phase = Phase.WARNING;
         phaseTicks = 0;
         forbiddenInput = false;
@@ -576,18 +664,26 @@ public final class RansomEncounter {
         warningStartY = 0.08F + RANDOM.nextFloat() * 0.70F;
         lastMouseX = minecraft.mouseHandler.xpos();
         lastMouseY = minecraft.mouseHandler.ypos();
-        FabricNetwork.sendToServer(new RansomProgressPayload(coins, targetCoins, 0));
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new RansomProgressPayload(coins, targetCoins, 0));
         sendPlayerVisualEffect(PlayerVisualEffectPayload.CLEAR);
     }
 
     private static void startJumpscare(Minecraft minecraft) {
+        if (minecraft.player == null || !minecraft.player.isAlive()
+                || minecraft.gui.screen() instanceof net.minecraft.client.gui.screens.DeathScreen) return;
         phase = Phase.JUMPSCARE;
         phaseTicks = 0;
-        minecraft.setScreenAndShow(null);
-        FabricNetwork.sendToServer(new RansomProgressPayload(coins, targetCoins, 0));
+        minecraft.gui.setScreen(null);
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new RansomProgressPayload(coins, targetCoins, 0));
         stopJumpscare(minecraft);
-        jumpscareSound = SimpleSoundInstance.forUI(RansomFabric.JUMPSCARE.get(), 1.0F, 1.0F);
-        minecraft.getSoundManager().play(jumpscareSound);
+        if (caveEncounter) {
+            stopSpawn(minecraft);
+            CaveRansomClient.startIntro();
+        }
+        else {
+            jumpscareSound = SimpleSoundInstance.forUI(RansomFabric.JUMPSCARE.get(), 1.0F, 1.0F);
+            playJumpscare(minecraft);
+        }
         sendPlayerVisualEffect(PlayerVisualEffectPayload.CHAOS);
     }
 
@@ -652,28 +748,7 @@ public final class RansomEncounter {
     }
 
     private static void reset() {
-        Phase previousPhase = phase;
-        Minecraft minecraft = Minecraft.getInstance();
-        setServerRansomState(minecraft, false, false, 0);
-        if (minecraft.player != null && !Inventory.isHotbarSlot(minecraft.player.getInventory().getSelectedSlot())) {
-            ((com.wentory.ransom_in_minecraft.mixin.InventorySelectionAccessor) minecraft.player.getInventory()).ransom$setSelectedSlot(lockedSlot);
-        }
-        phase = Phase.IDLE;
-        forcedRansomware = false;
-        phaseTicks = 0;
-        coins = 0;
-        displayedCoins = 0;
-        clearCoinEffects(minecraft);
-        POPUPS.clear();
-        extractionTicks = 0;
-        extracting = null;
-        INFECTED.clear();
-        GLITCH_BLOCKS.clear();
-        infectionCenter = null;
-        if (previousPhase != Phase.FAILED) stopJumpscare(Minecraft.getInstance());
-        if (!respawnRansomPending) stopSoundtrack(Minecraft.getInstance());
-        restoreMinecraftMusic(minecraft);
-        sendPlayerVisualEffect(PlayerVisualEffectPayload.CLEAR);
+        reset(true);
     }
 
     private static void infectNearbyBlocks(Minecraft minecraft) {
@@ -1314,11 +1389,15 @@ public final class RansomEncounter {
         }
     }
 
+    static void renderCaveFailure(GuiGraphicsExtractor graphics) { renderJumpscare(graphics,graphics.guiWidth(),graphics.guiHeight(),true,false); }
     private static void renderJumpscare(GuiGraphicsExtractor graphics, int width, int height) {
         renderJumpscare(graphics, width, height, false);
     }
 
     private static void renderJumpscare(GuiGraphicsExtractor graphics, int width, int height, boolean forceLarge) {
+        renderJumpscare(graphics,width,height,forceLarge,true);
+    }
+    private static void renderJumpscare(GuiGraphicsExtractor graphics,int width,int height,boolean forceLarge,boolean drawHotbar) {
         renderNoise(graphics, width, height, true);
         boolean firstFrame = !forceLarge && phaseTicks < 6;
         Identifier texture = firstFrame ? JUMPSCARE_1 : JUMPSCARE_2;
@@ -1333,14 +1412,16 @@ public final class RansomEncounter {
         int shakeY = RANDOM.nextInt(5) - 2;
         blitScaled(graphics, texture, (width - drawWidth) / 2 + shakeX, (availableHeight - drawHeight) / 2 + shakeY,
                 drawWidth, drawHeight, textureWidth, textureHeight);
-        renderLockedHotbar(graphics, width, height);
+        if(drawHotbar) renderLockedHotbar(graphics, width, height);
     }
 
     private static void renderInfectionSequence(GuiGraphicsExtractor graphics, Font font, int width, int height) {
         if (phaseTicks < jumpscareEndTick()) {
             renderJumpscare(graphics, width, height);
-        } else if (phaseTicks >= downloadStartTick() && phaseTicks < downloadEndTick()) {
+        } else if (phaseTicks >= downloadStartTick() && phaseTicks < (caveEncounter ? CAVE_RELEASE_TICK : downloadEndTick())) {
             renderDownload(graphics, font, width, height);
+            if (caveEncounter && phaseTicks >= CAVE_ERROR_TICK)
+                CaveRansomClient.downloadStars(graphics, phaseTicks - CAVE_ERROR_TICK);
         }
     }
 
@@ -1351,12 +1432,13 @@ public final class RansomEncounter {
         int panelHeight = 58;
         int x = (width - panelWidth) / 2;
         int y = (playHeight - panelHeight) / 2;
-        int shakeX = RANDOM.nextInt(5) - 2;
-        int shakeY = RANDOM.nextInt(5) - 2;
+        boolean caveError = caveEncounter && phaseTicks >= CAVE_ERROR_TICK;
+        int shakeX = caveError ? 0 : RANDOM.nextInt(5) - 2;
+        int shakeY = caveError ? 0 : RANDOM.nextInt(5) - 2;
         graphics.pose().pushMatrix();
         graphics.pose().translate(shakeX, shakeY);
         int dots = Math.floorMod((phaseTicks - downloadStartTick()) / 5, 4);
-        String downloading = "DOWNLOADING" + ".".repeat(dots);
+        String downloading = caveError ? "ERROR" : "DOWNLOADING" + ".".repeat(dots);
         drawCentered(graphics, font, Component.literal(downloading), width / 2, y + 16, 0xFFFFFFFF, 1.35F);
 
         int barX = x + 14;
@@ -1366,7 +1448,7 @@ public final class RansomEncounter {
         graphics.fill(barX - 2, barY - 2, barX + barWidth + 2, barY + barHeight + 2, 0xFF5A0909);
         graphics.fill(barX, barY, barX + barWidth, barY + barHeight, 0xFF050505);
         int duration = Math.max(1, downloadEndTick() - downloadStartTick());
-        float progress = Mth.clamp((phaseTicks - downloadStartTick()) / (float) duration, 0.0F, 1.0F);
+        float progress = Mth.clamp(((caveError ? CAVE_ERROR_TICK : phaseTicks) - downloadStartTick()) / (float) duration, 0.0F, 1.0F);
         int filledSegments = Math.min(10, (int) Math.ceil(progress * 10.0F));
         int gap = 2;
         int segmentWidth = (barWidth - gap * 9) / 10;
@@ -1827,6 +1909,7 @@ public final class RansomEncounter {
     }
 
     private static void stopJumpscare(Minecraft minecraft) {
+        CaveRansomClient.stopIntro();
         if (jumpscareSound != null) {
             minecraft.getSoundManager().stop(jumpscareSound);
             jumpscareSound = null;
@@ -1849,7 +1932,8 @@ public final class RansomEncounter {
     }
 
     private static int jumpscareEndTick() {
-        return Math.max(1, secondsToTicks(RansomwareSyncPayload.value(RansomwareConfig.JUMPSCARE_ENDS_AT)));
+        int minimum = hasCrucifix(Minecraft.getInstance()) ? 20 : 1;
+        return Math.max(minimum, secondsToTicks(RansomwareSyncPayload.value(RansomwareConfig.JUMPSCARE_ENDS_AT)));
     }
 
     private static int downloadStartTick() {

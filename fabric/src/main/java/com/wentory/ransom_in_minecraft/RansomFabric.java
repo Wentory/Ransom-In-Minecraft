@@ -9,6 +9,15 @@ public final class RansomFabric implements ModInitializer {
     public static final String MODID="ransom_in_minecraft";
     public static final Supplier<SoundEvent> SPAWN=sound("spawn");
     public static final Supplier<SoundEvent> JUMPSCARE=sound("jumpscare");
+    public static final Supplier<SoundEvent> JUMPSCARE_FAIL=sound("jumpscare_fail");
+    public static final Supplier<SoundEvent> JUMPSCARE2_FAIL=sound("jumpscare2_fail");
+    public static final Supplier<SoundEvent> CAVE_SHIELD=sound("cave_shield");
+    public static final Supplier<SoundEvent> CAVE_SCREAMING=sound("cave_screaming");
+    public static final Supplier<SoundEvent> CAVE_GLITCHING2=sound("cave_glitching2");
+    public static final Supplier<SoundEvent> CAVE_TELEPORT=sound("cave_teleport");
+    public static final Supplier<SoundEvent> CRUCIFIX_SUCCESS=sound("crucifix_success");
+    public static final Supplier<SoundEvent> RANSOM_BANISHMENT_SCREAM=sound("ransom_scream");
+    public static final Supplier<SoundEvent> HIJACK_CRUCIFIXED=sound("hijack_crucifixed");
     public static final Supplier<SoundEvent> JUMPSCARE2=sound("jumpscare2");
     public static final Supplier<SoundEvent> BOWOMP=sound("bowomp");
     public static final Supplier<SoundEvent> SUCCESS=sound("ransom_success");
@@ -49,6 +58,8 @@ public final class RansomFabric implements ModInitializer {
         return () -> event;
     }
     public void onInitialize() {
+        RansomItems.initialize();
+        RansomEffects.initialize();
         com.wentory.ransom_in_minecraft.platform.PersistentData.initialize();
         try {
             var dir = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir();
