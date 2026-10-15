@@ -65,6 +65,8 @@ Keep a Crucifix in your inventory to banish Ransom when he attacks. It also lets
 
 The Crucifix has **100 durability**. Its crafting recipe appears in the recipe book after your first encounter with Ransom or Stealer.
 
+![Crucifix crafting recipe](images/crucifix-recipe.png)
+
 </details>
 
 <details>
@@ -73,6 +75,8 @@ The Crucifix has **100 durability**. Its crafting recipe appears in the recipe b
 Use a Honey Pot to clear your Hijack buildup and gain **10 minutes of Firewall protection** against Hijack. It can also help you escape full capture once you unlock your inventory during the resistance minigame.
 
 Craft it with a **decorated pot and a honey block**. Both plain pots and pots with patterns work.
+
+![Honey Pot crafting recipe](images/honey-pot-recipe.png)
 
 </details>
 
