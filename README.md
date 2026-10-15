@@ -11,7 +11,7 @@ This is an unofficial fan project and is not affiliated with or endorsed by LSPL
 This mod contains jumpscares, sudden loud sounds, screen shake, flashing effects, and loss of character control.
 
 <details>
-<summary><h2>Ransomware</h2></summary>
+<summary><strong>Ransomware</strong></summary>
 
 When Ransom appears, stop moving and wait for the STOP sign to pass. Moving the mouse or pressing a forbidden key triggers his attack.
 
@@ -22,7 +22,7 @@ Failing can cost you the items in your hotbar. The item-loss penalty can be chan
 </details>
 
 <details>
-<summary><h2>Underground Ransom</h2></summary>
+<summary><strong>Underground Ransom</strong></summary>
 
 At **Y ≤ 62** in the Overworld, Ransomware is replaced by a different encounter. Moonlight is stronger underground and can help you without a Crucifix.
 
@@ -33,7 +33,7 @@ Survive **eight attacks**. Every attack counts, whether you parry it or get caug
 </details>
 
 <details>
-<summary><h2>Ransom: Stealer</h2></summary>
+<summary><strong>Ransom: Stealer</strong></summary>
 
 Unopened loot chests can be corrupted. Opening one starts a timed keyboard challenge: enter the displayed sequences to save the loot. Mistakes and missed deadlines can cost you items.
 
@@ -42,7 +42,7 @@ Stealer has Easy, Normal, and Hard difficulty settings.
 </details>
 
 <details>
-<summary><h2>Hijack</h2></summary>
+<summary><strong>Hijack</strong></summary>
 
 Some zombies, drowned, and creepers can spawn Hijacked. These encounters can increase your Hijack level, bringing screen interference and increasingly disruptive effects.
 
@@ -53,7 +53,7 @@ Keep your marker inside the moving area and time your clicks with the shrinking 
 </details>
 
 <details>
-<summary><h2>Crucifix</h2></summary>
+<summary><strong>Crucifix</strong></summary>
 
 Keep a Crucifix in your inventory to banish Ransom when he attacks. It also lets you cleanse corrupted chests and banish Hijacked mobs by hitting them with it.
 
@@ -62,7 +62,7 @@ The Crucifix has **100 durability**. Its crafting recipe appears in the recipe b
 </details>
 
 <details>
-<summary><h2>Honey Pot</h2></summary>
+<summary><strong>Honey Pot</strong></summary>
 
 Use a Honey Pot to clear your Hijack buildup and gain **10 minutes of Firewall protection** against Hijack. It can also help you escape full capture once you unlock your inventory during the resistance minigame.
 
