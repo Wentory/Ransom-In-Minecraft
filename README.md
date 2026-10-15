@@ -1,4 +1,4 @@
-**Ransom In Minecraft**
+# Ransom In Minecraft
 
 Ransom In Minecraft brings Ransom (A-90) from DOORS into your Minecraft world, recreating his original encounter and expanding it with my own mechanics and encounters.
 
@@ -8,13 +8,13 @@ This is an unofficial fan project and is not affiliated with or endorsed by LSPL
 
 ---
 
-**Content warning**
+## Content warning
 
 This mod contains jumpscares, sudden loud sounds, screen shake, flashing effects, and loss of character control.
 
 ---
 
-**Mod contents**
+## Mod contents
 
 <details>
 <summary><strong>Ransomware</strong></summary>
@@ -76,7 +76,7 @@ Craft it with a **decorated pot and a honey block**. Both plain pots and pots wi
 
 </details>
 
-**Config**
+## Config
 
 The config lets you adjust encounter frequency, the Ransomware area and infection range, item-loss penalties, Stealer difficulty and chest corruption chance, Hijacked mob spawn chances, and player Hijack settings. Features have separate controls, so you can tailor the mod to your world.
 
@@ -84,12 +84,12 @@ On Forge and NeoForge, open **Mods → Ransom In Minecraft → Config**. On Fabr
 
 ---
 
-**AI usage**
+## AI usage
 
 Since I do not know how to program in Java, I used AI to write the code, and only the code. I tested and corrected the mod, designed some of its mechanics, and adjusted its gameplay.
 
 ---
 
-**Bug reports and feedback**
+## Bug reports and feedback
 
 Found a bug or have feedback? Join [Wentory's Workshop on Discord](https://discord.gg/EzCnhBqSNk).
