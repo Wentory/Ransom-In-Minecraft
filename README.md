@@ -24,7 +24,7 @@ Failing can cost you the items in your hotbar. The item-loss penalty can be chan
 <details>
 <summary><h2>Underground Ransom</h2></summary>
 
-Below sea level, Ransomware is replaced by a different encounter. Moonlight is stronger underground and can help you without a Crucifix.
+At **Y ≤ 62** in the Overworld, Ransomware is replaced by a different encounter. Moonlight is stronger underground and can help you without a Crucifix.
 
 Ransom becomes a cloud of glitches that rushes toward you. Hit him to knock him away, then watch for his next approach: he can change direction or teleport. The attacked player can see and hit him through walls.
 
