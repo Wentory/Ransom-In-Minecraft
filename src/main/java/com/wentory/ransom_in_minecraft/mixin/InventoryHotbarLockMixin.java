@@ -10,12 +10,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Inventory.class)
 public abstract class InventoryHotbarLockMixin {
+    // Keep item ownership and indexed slot access intact; mask only the equipped view.
+    @Inject(method = "getSelected", at = @At("HEAD"), cancellable = true)
+    private void ransom$emptyLockedMainHand(CallbackInfoReturnable<ItemStack> cir) {
+        Inventory inventory = (Inventory) (Object) this;
+        if (RansomServerState.isHotbarLocked(inventory.player)) cir.setReturnValue(ItemStack.EMPTY);
+    }
+
     @Inject(method = "getFreeSlot", at = @At("HEAD"), cancellable = true)
     private void ransom$getUnlockedFreeSlot(CallbackInfoReturnable<Integer> cir) {
         Inventory inventory = (Inventory) (Object) this;
         if (!RansomServerState.isHotbarLocked(inventory.player)
                 && !RansomServerState.hasEncryptedInventorySlots(inventory.player)) return;
-        for (int slot = Inventory.getSelectionSize() + 1; slot < 36; slot++) {
+        for (int slot = Inventory.getSelectionSize(); slot < 36; slot++) {
             if (!RansomServerState.isInventorySlotEncrypted(inventory.player, slot)
                     && inventory.getItem(slot).isEmpty()) {
                 cir.setReturnValue(slot);
@@ -31,7 +38,7 @@ public abstract class InventoryHotbarLockMixin {
         if (!RansomServerState.isHotbarLocked(inventory.player)
                 && !RansomServerState.hasEncryptedInventorySlots(inventory.player)) return;
 
-        for (int slot = Inventory.getSelectionSize() + 1; slot < 36; slot++) {
+        for (int slot = Inventory.getSelectionSize(); slot < 36; slot++) {
             if (RansomServerState.isInventorySlotEncrypted(inventory.player, slot)) continue;
             ItemStack existing = inventory.getItem(slot);
             if (ItemStack.isSameItemSameComponents(existing, incoming)

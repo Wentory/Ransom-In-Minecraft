@@ -139,6 +139,9 @@ public final class RansomServerState {
                     if (!(context.player() instanceof ServerPlayer player)) return;
                     if (com.wentory.ransom_in_minecraft.CrucifixCircleTest.isBanishing(player)) return;
                     if (com.wentory.ransom_in_minecraft.FullHijack.active(player)) return;
+                    if (payload.success() && !payload.active() && !payload.failure() && payload.penaltyDamage() == 0
+                            && player.isAlive() && !player.isSpectator())
+                        com.wentory.ransom_in_minecraft.RansomAdvancements.wonRansomware(player);
                     if (payload.penaltyDamage() > 0) damage(player, payload.penaltyDamage(), payload.coins());
                     else if (payload.failure()) fail(player, payload.coins(),
                             player.getPersistentData().getBoolean(FAILURE_ARMED)
@@ -313,7 +316,7 @@ public final class RansomServerState {
         if (!(event.getEntity() instanceof ServerPlayer player)
                 || !LOCKED_PLAYERS.containsKey(player.getUUID())) return;
         if (ReplayCompatibility.isReplayServer(player.getServer())) return;
-        player.getInventory().selected = Inventory.getSelectionSize();
+        player.getInventory().selected = LOCKED_PLAYERS.get(player.getUUID()).selectedSlot();
 
     }
 
@@ -519,7 +522,7 @@ public final class RansomServerState {
         if (previous == null) {
             RansomPackets.sendToAllPlayers(new InfectionStatusPayload(player.getUUID(), true));
         }
-        player.getInventory().selected = Inventory.getSelectionSize();
+        player.getInventory().selected = LOCKED_PLAYERS.get(player.getUUID()).selectedSlot();
     }
 
     public static void finishCrucifixRescue(ServerPlayer player) {

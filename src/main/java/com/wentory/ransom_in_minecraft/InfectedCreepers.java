@@ -87,6 +87,7 @@ public final class InfectedCreepers {
         if (ReplayCompatibility.isReplayServer(event.getLevel().getServer())) return;
         if (!event.getLevel().isClientSide() && event.getEntity() instanceof Creeper creeper && isInfected(creeper)) {
             creeper.getPersistentData().putInt(PHASE, 0);
+            creeper.setInvulnerable(false);
             creeper.setNoGravity(false);
             configure(creeper);
         }
@@ -119,6 +120,7 @@ public final class InfectedCreepers {
         if (creeper.getTarget() instanceof Player captured && FullHijack.active(captured)) {
             creeper.setTarget(null);
             creeper.getPersistentData().putInt(PHASE, 0);
+            creeper.setInvulnerable(false);
             creeper.refreshDimensions();
             creeper.setNoGravity(false);
             creeper.setDeltaMovement(Vec3.ZERO);
@@ -127,6 +129,7 @@ public final class InfectedCreepers {
         creeper.setSwellDir(-1);
         creeper.getNavigation().stop();
         if (phase(creeper) == 2) {
+            creeper.setInvulnerable(true);
             tickFlight(creeper);
             return;
         }
@@ -134,6 +137,7 @@ public final class InfectedCreepers {
                 || player.isCreative() || player.isSpectator()) {
             if (phase(creeper) != 0) {
                 creeper.getPersistentData().putInt(PHASE, 0);
+                creeper.setInvulnerable(false);
                 creeper.refreshDimensions();
                 creeper.setNoGravity(false);
                 sync(creeper);
@@ -161,6 +165,7 @@ public final class InfectedCreepers {
             if (now >= creeper.getPersistentData().getLong(END)) {
                 Vec3 center = creeper.getBoundingBox().getCenter();
                 creeper.getPersistentData().putInt(PHASE, 2);
+                creeper.setInvulnerable(true);
                 creeper.refreshDimensions();
                 creeper.setPos(center.x, center.y - creeper.getBbHeight() * 0.5D, center.z);
                 Vec3 relative = player.getBoundingBox().getCenter().subtract(center);
@@ -200,17 +205,14 @@ public final class InfectedCreepers {
     @SubscribeEvent
     public static void onHurt(LivingDamageEvent.Post event) {
         if (!(event.getEntity() instanceof Creeper creeper) || creeper.level().isClientSide()
-                || !creeper.isAlive() || !isInfected(creeper) || event.getNewDamage() <= 0
+                || !creeper.isAlive() || !isInfected(creeper) || phase(creeper) == 2 || event.getNewDamage() <= 0
                 || CrucifixActions.isBanishing(creeper) || ReplayCompatibility.isReplayServer(creeper.getServer())) return;
         long now = creeper.level().getGameTime();
         long remaining = Math.max(0, creeper.getPersistentData().getLong(STOP_END) - now);
         long extension = Math.max(0, DAMAGE_STOP_TICKS - remaining);
-        // Keep ascent/flight timers paused rather than letting them expire during STOP.
+        // Damage can pause ascent; the launched head is invulnerable.
         if (phase(creeper) == 1) creeper.getPersistentData().putLong(END, creeper.getPersistentData().getLong(END) + extension);
-        if (phase(creeper) == 2) {
-            String flightEnd = "ransom_creeper_flight_end";
-            creeper.getPersistentData().putLong(flightEnd, creeper.getPersistentData().getLong(flightEnd) + extension);
-        }
+
         creeper.getPersistentData().putLong(STOP_END, now + DAMAGE_STOP_TICKS);
         freeze(creeper);
         RansomPackets.sendToPlayersTrackingEntityAndSelf(creeper, new ZombieStopPayload(creeper.getUUID(), DAMAGE_STOP_TICKS));

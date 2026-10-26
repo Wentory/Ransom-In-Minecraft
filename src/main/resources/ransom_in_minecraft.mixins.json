@@ -3,7 +3,33 @@
   "minVersion": "0.8",
   "package": "com.wentory.ransom_in_minecraft.mixin",
   "compatibilityLevel": "JAVA_21",
-  "mixins": ["HotbarLockMenuMixin", "InventoryHotbarLockMixin", "EncryptedSlotMixin", "ZombieBodyControlMixin", "InfectedZombieSunMixin", "InfectedZombieSoundMixin", "InfectedCreeperMixin", "InfectedZombieJumpMixin", "HijackedWaterTravelMixin", "InfectedCreeperDimensionsMixin", "HijackedTargetMixin"],
-  "client": ["SceneCarriedItemMixin", "ItemInHandRendererInvoker", "SoundManagerAccessor", "SoundEngineAccessor", "InfectedZombieModelMixin", "HijackedDrownedModelMixin", "InfectedCreeperModelMixin", "MobBanishmentRendererMixin", "FullHijackDistortionMixin", "FullHijackSoundMixin"],
-  "injectors": {"defaultRequire": 1}
+  "mixins": [
+    "HotbarLockMenuMixin",
+    "InventoryHotbarLockMixin",
+    "EncryptedSlotMixin",
+    "ZombieBodyControlMixin",
+    "InfectedZombieSunMixin",
+    "InfectedZombieSoundMixin",
+    "InfectedCreeperMixin",
+    "InfectedZombieJumpMixin",
+    "HijackedWaterTravelMixin",
+    "InfectedCreeperDimensionsMixin",
+    "HijackedTargetMixin"
+  ],
+  "client": [
+    "SceneCarriedItemMixin",
+    "ItemInHandRendererInvoker",
+    "SoundManagerAccessor",
+    "SoundEngineAccessor",
+    "InfectedZombieModelMixin",
+    "HijackedDrownedModelMixin",
+    "InfectedCreeperModelMixin",
+    "MobBanishmentRendererMixin",
+    "FullHijackDistortionMixin",
+    "FullHijackSoundMixin",
+    "StopMouseInputMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
 }

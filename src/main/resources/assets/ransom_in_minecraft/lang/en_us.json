@@ -1,4 +1,5 @@
 {
+  "item.ransom_in_minecraft.stop_icon": "STOP",
   "ransom.command.started": "Ransom is already watching.",
   "ransom.command.busy": "An encounter is already running.",
   "ransom.hotbar_locked": "HOTBAR LOCKED",
