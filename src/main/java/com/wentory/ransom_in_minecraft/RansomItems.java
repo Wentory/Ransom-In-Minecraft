@@ -13,6 +13,9 @@ public final class RansomItems {
             () -> new HoneyPotItem(new Item.Properties()));
     public static final RegistryObject<Item> CRUCIFIX = ITEMS.register("crucifix",
             () -> new Item(new Item.Properties().durability(100)));
+    // Advancement-only icon; not included in creative tabs or recipes.
+    public static final RegistryObject<Item> STOP_ICON = ITEMS.register("stop_icon",
+            () -> new Item(new Item.Properties()));
     private RansomItems() {
     }
 

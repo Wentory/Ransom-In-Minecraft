@@ -3,7 +3,11 @@ package com.wentory.ransom_in_minecraft.network;
 import net.minecraft.network.FriendlyByteBuf;
 
 public record RansomStatePayload(boolean active, boolean failure, int coins, int penaltyDamage,
-                                 boolean deleteHotbar) {
+                                 boolean deleteHotbar, boolean success) {
+    public RansomStatePayload(boolean active, boolean failure, int coins, int penaltyDamage, boolean deleteHotbar) {
+        this(active, failure, coins, penaltyDamage, deleteHotbar, false);
+    }
+
     public static final Class<RansomStatePayload> TYPE = RansomStatePayload.class;
     public static final Object STREAM_CODEC = new Object();
     public static void encode(RansomStatePayload payload, FriendlyByteBuf buffer) {
@@ -12,9 +16,10 @@ public record RansomStatePayload(boolean active, boolean failure, int coins, int
         buffer.writeVarInt(payload.coins());
         buffer.writeVarInt(payload.penaltyDamage());
         buffer.writeBoolean(payload.deleteHotbar());
+        buffer.writeBoolean(payload.success());
     }
     public static RansomStatePayload decode(FriendlyByteBuf buffer) {
-        return new RansomStatePayload(buffer.readBoolean(), buffer.readBoolean(), buffer.readVarInt(), buffer.readVarInt(), buffer.readBoolean());
+        return new RansomStatePayload(buffer.readBoolean(), buffer.readBoolean(), buffer.readVarInt(), buffer.readVarInt(), buffer.readBoolean(), buffer.readBoolean());
     }
 
 }

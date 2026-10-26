@@ -28,7 +28,8 @@
     "InfectedZombieModelMixin",
     "HijackedDrownedModelMixin",
     "InfectedCreeperModelMixin",
-    "SceneCarriedItemMixin"
+    "SceneCarriedItemMixin",
+    "StopMouseInputMixin"
   ],
   "injectors": {
     "defaultRequire": 1

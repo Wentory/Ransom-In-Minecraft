@@ -136,3 +136,48 @@ tasks.register('moonlightParticleTest', JavaExec) {
     mainClass = 'com.wentory.ransom_in_minecraft.client.MoonlightParticleTest'
 }
 tasks.named('check') { dependsOn tasks.named('moonlightParticleTest') }
+
+apply from: rootProject.file('gradle/collect-release.gradle')
+
+// Optional local compatibility-test mods; excluded from release dependencies.
+if (file('run-1.20.1/compatibility.gradle').exists()) {
+    apply from: 'run-1.20.1/compatibility.gradle'
+}
+
+// Validate real vanilla model emission through the banishment wrapper.
+tasks.register('banishmentRenderTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.wentory.ransom_in_minecraft.client.BanishmentVertexConsumerTest'
+}
+tasks.named('check') { dependsOn tasks.named('banishmentRenderTest') }
+
+tasks.register('stopMouseTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.wentory.ransom_in_minecraft.client.StopMouseMovementTest'
+}
+tasks.named('check') { dependsOn tasks.named('stopMouseTest') }
+
+tasks.register('stopHeldInputTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.wentory.ransom_in_minecraft.client.StopHeldInputTest'
+}
+tasks.named('check') { dependsOn tasks.named('stopHeldInputTest') }
+
+tasks.register('hijackSpeechTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.wentory.ransom_in_minecraft.HijackChatCommandsTest'
+}
+tasks.named('check') { dependsOn tasks.named('hijackSpeechTest') }
+
+
+tasks.register('encounterResultTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.wentory.ransom_in_minecraft.network.RansomStatePayloadTest'
+}
+
+tasks.named('check') { dependsOn tasks.named('encounterResultTest') }

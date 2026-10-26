@@ -132,8 +132,7 @@ public final class RansomEncounter {
     private static boolean soundtrackPaused;
     private static int lockedSlot;
     private static boolean forbiddenInput;
-    private static double lastMouseX;
-    private static double lastMouseY;
+    private static final StopMouseMovement STOP_MOUSE = new StopMouseMovement();
     private static BlockPos extracting;
     private static int extractionTicks;
     private static float mainWindowX = 0.5F;
@@ -449,14 +448,9 @@ public final class RansomEncounter {
             minecraft.getSoundManager().play(spawnSound);
             sendPlayerVisualEffect(PlayerVisualEffectPayload.STOP);
         }
-        double mouseX = minecraft.mouseHandler.xpos();
-        double mouseY = minecraft.mouseHandler.ypos();
-        boolean mouseMoved = Math.abs(mouseX - lastMouseX) > 0.01D
-                || Math.abs(mouseY - lastMouseY) > 0.01D;
-        lastMouseX = mouseX;
-        lastMouseY = mouseY;
+        boolean mouseMoved = STOP_MOUSE.consume();
         int movementLockTick = WARNING_STOP_TICK + WARNING_REACTION_GRACE_TICKS;
-        if (phaseTicks >= movementLockTick && phaseTicks < WARNING_TICKS
+        if (minecraft.isWindowActive() && phaseTicks >= movementLockTick && phaseTicks < WARNING_TICKS
                 && (forbiddenInput || mouseMoved || stopInputHeld(minecraft))) {
             startJumpscare(minecraft);
         } else if (phaseTicks >= WARNING_TICKS + WARNING_EXIT_TICKS) {
@@ -466,9 +460,9 @@ public final class RansomEncounter {
     }
 
     private static void tickRansom(Minecraft minecraft) {
-        // Index 9 is deliberately outside the nine real hotbar slots. Inventory#getSelected
-        // therefore exposes an empty main hand without moving or replacing any item stack.
-        minecraft.player.getInventory().selected = Inventory.getSelectionSize();
+        // Keep a vanilla hotbar index for inventory integrations such as Apoli.
+        // Inventory#getSelected masks the held stack while Ransomware locks the hotbar.
+        minecraft.player.getInventory().selected = lockedSlot;
         PacketDistributor.sendToServer(new RansomProgressPayload(coins, targetCoins, phaseTicks));
 
         // The win is already secured by the real coin total. Keep the encounter
@@ -635,7 +629,7 @@ public final class RansomEncounter {
     private static void finishVictory(Minecraft minecraft) {
         stopSoundtrack(minecraft);
         restoreMinecraftMusic(minecraft);
-        setServerRansomState(minecraft, false, false, 0);
+        PacketDistributor.sendToServer(new RansomStatePayload(false, false, coins, 0, false, true));
         if (!Inventory.isHotbarSlot(minecraft.player.getInventory().selected)) {
             minecraft.player.getInventory().selected = lockedSlot;
         }
@@ -671,11 +665,11 @@ public final class RansomEncounter {
         infectionCenter = null;
         infectionPreflightDone = false;
         underwaterExit = false;
-        lockedSlot = minecraft.player.getInventory().selected;
+        lockedSlot = Inventory.isHotbarSlot(minecraft.player.getInventory().selected)
+                ? minecraft.player.getInventory().selected : 0;
         warningStartX = 0.08F + RANDOM.nextFloat() * 0.84F;
         warningStartY = 0.08F + RANDOM.nextFloat() * 0.70F;
-        lastMouseX = minecraft.mouseHandler.xpos();
-        lastMouseY = minecraft.mouseHandler.ypos();
+        STOP_MOUSE.clear();
         PacketDistributor.sendToServer(new RansomProgressPayload(coins, targetCoins, 0));
         sendPlayerVisualEffect(PlayerVisualEffectPayload.CLEAR);
     }
@@ -895,17 +889,19 @@ public final class RansomEncounter {
 
     @SubscribeEvent
     public static void keyInput(InputEvent.Key event) {
-        if (phase == Phase.WARNING && event.getAction() == GLFW.GLFW_PRESS
+        if (Minecraft.getInstance().isWindowActive() && phase == Phase.WARNING && event.getAction() == GLFW.GLFW_PRESS
                 && event.getKey() != GLFW.GLFW_KEY_ESCAPE) forbiddenInput = true;
     }
 
     @SubscribeEvent
     public static void mouseInput(InputEvent.MouseButton.Pre event) {
-        if (phase == Phase.WARNING && event.getAction() == GLFW.GLFW_PRESS) forbiddenInput = true;
+        if (Minecraft.getInstance().isWindowActive() && phase == Phase.WARNING && event.getAction() == GLFW.GLFW_PRESS) forbiddenInput = true;
     }
 
     @SubscribeEvent
     public static void scrollInput(InputEvent.MouseScrollingEvent event) {
+        if (Minecraft.getInstance().isWindowActive() && phase == Phase.WARNING
+                && event.getScrollDelta() != 0) forbiddenInput = true;
         if (handsLocked()) event.setCanceled(true);
     }
 
@@ -1993,13 +1989,42 @@ public final class RansomEncounter {
         return (int) Math.round(seconds * 20.0);
     }
 
+    public static void mouseMoved(boolean activeWindow, boolean ignoreFirstMove,
+                                  double previousX, double previousY, double x, double y) {
+        if (phase == Phase.WARNING) STOP_MOUSE.moved(activeWindow, ignoreFirstMove, previousX, previousY, x, y);
+    }
+
     private static boolean stopInputHeld(Minecraft minecraft) {
         var options = minecraft.options;
-        return options.keyUp.isDown() || options.keyDown.isDown()
-                || options.keyLeft.isDown() || options.keyRight.isDown()
-                || options.keyJump.isDown() || options.keyShift.isDown()
-                || options.keySprint.isDown() || options.keyAttack.isDown()
-                || options.keyUse.isDown();
+        return physicalKeyHeld(minecraft, options.keyUp) || physicalKeyHeld(minecraft, options.keyDown)
+                || physicalKeyHeld(minecraft, options.keyLeft) || physicalKeyHeld(minecraft, options.keyRight)
+                || physicalKeyHeld(minecraft, options.keyJump) || physicalKeyHeld(minecraft, options.keyShift)
+                || physicalKeyHeld(minecraft, options.keySprint) || physicalKeyHeld(minecraft, options.keyAttack)
+                || physicalKeyHeld(minecraft, options.keyUse);
+    }
+
+    private static boolean physicalKeyHeld(Minecraft minecraft, net.minecraft.client.KeyMapping mapping) {
+        var key = mapping.getKey();
+        long window = minecraft.getWindow().getWindow();
+        var device = switch (key.getType()) {
+            case KEYSYM -> StopHeldInput.Device.KEYBOARD;
+            case SCANCODE -> StopHeldInput.Device.SCANCODE;
+            case MOUSE -> StopHeldInput.Device.MOUSE;
+        };
+        return StopHeldInput.held(minecraft.isWindowActive(), device, key.getValue(),
+                code -> code >= GLFW.GLFW_KEY_SPACE && code <= GLFW.GLFW_KEY_LAST
+                        && GLFW.glfwGetKey(window, code) == GLFW.GLFW_PRESS,
+                scan -> physicalScancodeHeld(window, scan),
+                button -> button <= GLFW.GLFW_MOUSE_BUTTON_LAST
+                        && GLFW.glfwGetMouseButton(window, button) == GLFW.GLFW_PRESS);
+    }
+
+    private static boolean physicalScancodeHeld(long window, int scancode) {
+        for (int key = GLFW.GLFW_KEY_SPACE; key <= GLFW.GLFW_KEY_LAST; key++) {
+            if (GLFW.glfwGetKey(window, key) == GLFW.GLFW_PRESS
+                    && GLFW.glfwGetKeyScancode(key) == scancode) return true;
+        }
+        return false;
     }
 
     private static int infectionRadius() {

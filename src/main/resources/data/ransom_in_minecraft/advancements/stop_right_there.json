@@ -1,0 +1,23 @@
+{
+  "display": {
+    "icon": {
+      "item": "ransom_in_minecraft:crucifix"
+    },
+    "title": {
+      "text": "STOP Right There"
+    },
+    "description": {
+      "text": "Banish Ransom with a Crucifix."
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "success": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "parent": "ransom_in_minecraft:firewall"
+}

@@ -124,6 +124,9 @@ public final class RansomServerState {
         registrar.playToServer(RansomStatePayload.TYPE, RansomStatePayload.STREAM_CODEC,
                 (payload, context) -> {
                     if (!(context.player() instanceof ServerPlayer player)) return;
+                    if (payload.success() && !payload.active() && !payload.failure() && payload.penaltyDamage() == 0
+                            && player.isAlive() && !player.isSpectator())
+                        com.wentory.ransom_in_minecraft.RansomAdvancements.wonRansomware(player);
                     if (payload.penaltyDamage() > 0) damage(player, payload.penaltyDamage(), payload.coins());
                     else if (payload.failure()) fail(player, payload.coins(), RansomwareConfig.DELETE_HOTBAR_ON_FAILURE.get());
                     else if (payload.active()) lockHands(player);
@@ -292,7 +295,7 @@ public final class RansomServerState {
         if (ReplayCompatibility.isReplayServer(event.player.getServer())) return;
         if (event.phase != net.minecraftforge.event.TickEvent.Phase.END || !(event.player instanceof ServerPlayer player)
                 || !LOCKED_PLAYERS.containsKey(player.getUUID())) return;
-        player.getInventory().selected = Inventory.getSelectionSize();
+        player.getInventory().selected = LOCKED_PLAYERS.get(player.getUUID()).selectedSlot();
     }
 
     @SubscribeEvent
@@ -499,7 +502,7 @@ public final class RansomServerState {
         if (previous == null) {
             PacketDistributor.sendToAllPlayers(new InfectionStatusPayload(player.getUUID(), true));
         }
-        player.getInventory().selected = Inventory.getSelectionSize();
+        player.getInventory().selected = LOCKED_PLAYERS.get(player.getUUID()).selectedSlot();
     }
 
     public static void beginCrucifixSpawnCooldown(ServerPlayer player) {

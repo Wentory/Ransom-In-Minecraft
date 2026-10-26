@@ -1,0 +1,16 @@
+// Collect the finished JAR without depending on machine-specific absolute paths.
+def checkoutParent = rootProject.projectDir.parentFile
+def collectionRoot = checkoutParent.name == '.worktrees' ? checkoutParent.parentFile : rootProject.projectDir
+def collectionDirectory = providers.gradleProperty('releaseBuildsDir')
+        .map { new File(it) }.getOrElse(new File(collectionRoot, 'builds'))
+
+def collectionTask = tasks.register('collectReleaseBuild', Copy) {
+    group = 'build'
+    description = 'Copy the finished mod JAR to the shared builds folder.'
+    dependsOn tasks.named('assemble')
+    if (tasks.findByName('reobfJar') != null) dependsOn tasks.named('reobfJar')
+    mustRunAfter tasks.named('check')
+    from(tasks.named('jar', Jar).flatMap { it.archiveFile })
+    into collectionDirectory
+}
+tasks.named('build') { dependsOn collectionTask }
