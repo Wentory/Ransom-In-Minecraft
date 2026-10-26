@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "ransom_in_minecraft:item/stop_icon"
+  }
+}

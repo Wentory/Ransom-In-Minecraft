@@ -4,6 +4,7 @@
   "package": "com.wentory.ransom_in_minecraft.mixin",
   "compatibilityLevel": "JAVA_25",
   "mixins": [
+    "HijackChatCommandMixin",
     "HijackedTargetMixin",
     "InventorySelectionAccessor",
     "HotbarLockMenuMixin",
@@ -24,6 +25,7 @@
     "StealerAirMixin"
   ],
   "client": [
+    "StopKeyMappingAccessor",
     "CrucifixSpatialSoundMixin",
     "FirewallHudMixin",
     "MobBanishmentRendererMixin",
@@ -53,7 +55,8 @@
     "FabricHudMixin",
     "FabricInteractionMixin",
     "GuiGraphicsStateAccessor",
-    "SceneCarriedItemMixin"
+    "SceneCarriedItemMixin",
+    "StopMouseInputMixin"
   ],
   "injectors": {
     "defaultRequire": 1

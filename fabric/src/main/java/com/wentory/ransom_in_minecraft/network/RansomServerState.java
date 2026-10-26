@@ -127,6 +127,9 @@ public final class RansomServerState {
                 (payload, context) -> {
                     if (!(context.player() instanceof ServerPlayer player)) return;
                     if(com.wentory.ransom_in_minecraft.FullHijack.active(player) || com.wentory.ransom_in_minecraft.CrucifixCircleTest.isBanishing(player))return;
+                    if (payload.success() && !payload.active() && !payload.failure() && payload.penaltyDamage() == 0
+                            && player.isAlive() && !player.isSpectator())
+                        com.wentory.ransom_in_minecraft.RansomAdvancements.wonRansomware(player);
                     if (payload.penaltyDamage() > 0) damage(player, payload.penaltyDamage(), payload.coins());
                     else if (payload.failure()) fail(player, payload.coins(), RansomwareConfig.DELETE_HOTBAR_ON_FAILURE.get());
                     else if (payload.active()) lockHands(player);
@@ -294,7 +297,7 @@ public final class RansomServerState {
         if (ReplayCompatibility.isReplayServer(event.getEntity().level().getServer())) return;
         if (!(event.getEntity() instanceof ServerPlayer player)
                 || !LOCKED_PLAYERS.containsKey(player.getUUID())) return;
-        ((com.wentory.ransom_in_minecraft.mixin.InventorySelectionAccessor) player.getInventory()).ransom$setSelectedSlot(Inventory.getSelectionSize());
+        player.getInventory().setSelectedSlot(LOCKED_PLAYERS.get(player.getUUID()).selectedSlot());
     }
 
         public static void naturalSpawnTick(PlayerTickEvent.Post event) {
@@ -493,7 +496,7 @@ public final class RansomServerState {
         if (previous == null) {
             FabricNetwork.sendToAllPlayers(new InfectionStatusPayload(player.getUUID(), true));
         }
-        ((com.wentory.ransom_in_minecraft.mixin.InventorySelectionAccessor) player.getInventory()).ransom$setSelectedSlot(Inventory.getSelectionSize());
+        player.getInventory().setSelectedSlot(LOCKED_PLAYERS.get(player.getUUID()).selectedSlot());
     }
 
     public static void beginCrucifixSpawnCooldown(ServerPlayer player) {

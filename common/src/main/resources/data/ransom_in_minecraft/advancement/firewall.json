@@ -1,0 +1,23 @@
+{
+  "display": {
+    "icon": {
+      "id": "ransom_in_minecraft:stop_icon"
+    },
+    "title": {
+      "text": "Firewall"
+    },
+    "description": {
+      "text": "Don't try that with me."
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false,
+    "background": "minecraft:gui/advancements/backgrounds/stone"
+  },
+  "criteria": {
+    "success": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

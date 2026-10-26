@@ -17,6 +17,8 @@ public abstract class RansomMouseMixin {
 
     @Inject(method = "onScroll", at = @At("HEAD"), cancellable = true)
     private void ransom$blockHotbarScroll(long window, double horizontal, double vertical, CallbackInfo ci) {
+        if (window != net.minecraft.client.Minecraft.getInstance().getWindow().handle()) return;
+        RansomEncounter.scrollInput(horizontal, vertical);
         if (RansomEncounter.handsLocked()) ci.cancel();
     }
 }

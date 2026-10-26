@@ -18,6 +18,7 @@
     "InfectedCreeperDimensionsMixin"
   ],
   "client": [
+    "StopKeyMappingAccessor",
     "CrucifixSpatialSoundMixin",
     "FirewallHudMixin",
     "MobBanishmentRendererMixin",
@@ -36,7 +37,8 @@
     "HijackedDrownedModelMixin",
     "InfectedCreeperModelMixin",
     "RenderStateEntityMixin",
-    "SceneCarriedItemMixin"
+    "SceneCarriedItemMixin",
+    "StopMouseInputMixin"
   ],
   "injectors": {
     "defaultRequire": 1

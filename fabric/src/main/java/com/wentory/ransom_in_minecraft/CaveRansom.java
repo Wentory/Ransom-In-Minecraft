@@ -92,13 +92,15 @@ public final class CaveRansom {
                     RansomFabric.CAVE_GLITCHING2.get(), net.minecraft.sounds.SoundSource.HOSTILE, 1F, 1F);
         }
         if (outcome == 2) {
-            var inventory = player.getInventory();
-            var slots = new java.util.ArrayList<Integer>();
-            for (int i = 0; i < 9; i++) if (!inventory.getItem(i).isEmpty()) slots.add(i);
-            if (slots.isEmpty()) for (int i = 9; i < 36; i++) if (!inventory.getItem(i).isEmpty()) slots.add(i);
-            if (!slots.isEmpty()) inventory.setItem(slots.get(player.getRandom().nextInt(slots.size())), net.minecraft.world.item.ItemStack.EMPTY);
-            inventory.setChanged();
-            player.inventoryMenu.broadcastChanges();
+            if (RansomwareConfig.DELETE_HOTBAR_ON_FAILURE.get()) {
+                var inventory = player.getInventory();
+                var slots = new java.util.ArrayList<Integer>();
+                for (int i = 0; i < 9; i++) if (!inventory.getItem(i).isEmpty()) slots.add(i);
+                if (slots.isEmpty()) for (int i = 9; i < 36; i++) if (!inventory.getItem(i).isEmpty()) slots.add(i);
+                if (!slots.isEmpty()) inventory.setItem(slots.get(player.getRandom().nextInt(slots.size())), net.minecraft.world.item.ItemStack.EMPTY);
+                inventory.setChanged();
+                player.inventoryMenu.broadcastChanges();
+            }
             WormInfection.add(player, 10);
             var damageKey = net.minecraft.resources.ResourceKey.create(
                     net.minecraft.core.registries.Registries.DAMAGE_TYPE,

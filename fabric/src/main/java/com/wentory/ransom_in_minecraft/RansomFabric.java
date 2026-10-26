@@ -71,5 +71,6 @@ public final class RansomFabric implements ModInitializer {
         RansomwareConfig.SPEC.load("ransom_in_minecraft-ransomware.properties");
         StealerConfig.SPEC.load("ransom_in_minecraft-common.properties");
         com.wentory.ransom_in_minecraft.platform.FabricHooks.initialize();
+        HijackSpeech.initialize();
     }
 }

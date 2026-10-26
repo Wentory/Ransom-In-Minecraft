@@ -103,6 +103,7 @@ public final class RansomChestGame {
         }
         com.wentory.ransom_in_minecraft.CrucifixActions.damage(player.getMainHandItem(), player, 5,
                 net.minecraft.world.entity.EquipmentSlot.MAINHAND);
+        com.wentory.ransom_in_minecraft.RansomAdvancements.banished(player);
         level.playSound(null, pos, RansomFabric.CRUCIFIX_SUCCESS.get(),
                 SoundSource.PLAYERS, 1.0F, 1.0F);
         for (ChestBlockEntity chest : parts) {

@@ -10,6 +10,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Inventory.class)
 public abstract class InventoryHotbarLockMixin {
+    // Keep item ownership and indexed slot access intact; mask only the equipped view.
+    @Inject(method = "getSelectedItem", at = @At("HEAD"), cancellable = true)
+    private void ransom$emptyLockedMainHand(CallbackInfoReturnable<ItemStack> cir) {
+        Inventory inventory = (Inventory) (Object) this;
+        if (RansomServerState.isHotbarLocked(inventory.player)) cir.setReturnValue(ItemStack.EMPTY);
+    }
+
     @Inject(method = "getFreeSlot", at = @At("HEAD"), cancellable = true)
     private void ransom$getUnlockedFreeSlot(CallbackInfoReturnable<Integer> cir) {
         Inventory inventory = (Inventory) (Object) this;

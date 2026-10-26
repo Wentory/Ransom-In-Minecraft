@@ -8,7 +8,11 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
 public record RansomStatePayload(boolean active, boolean failure, int coins, int penaltyDamage,
-                                 boolean deleteHotbar) implements CustomPacketPayload {
+                                 boolean deleteHotbar, boolean success) implements CustomPacketPayload {
+    public RansomStatePayload(boolean active, boolean failure, int coins, int penaltyDamage, boolean deleteHotbar) {
+        this(active, failure, coins, penaltyDamage, deleteHotbar, false);
+    }
+
     public static final Type<RansomStatePayload> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath(RansomFabric.MODID, "ransom_state"));
     public static final StreamCodec<RegistryFriendlyByteBuf, RansomStatePayload> STREAM_CODEC = StreamCodec.composite(
@@ -17,6 +21,7 @@ public record RansomStatePayload(boolean active, boolean failure, int coins, int
             ByteBufCodecs.VAR_INT, RansomStatePayload::coins,
             ByteBufCodecs.VAR_INT, RansomStatePayload::penaltyDamage,
             ByteBufCodecs.BOOL, RansomStatePayload::deleteHotbar,
+            ByteBufCodecs.BOOL, RansomStatePayload::success,
             RansomStatePayload::new);
 
     @Override

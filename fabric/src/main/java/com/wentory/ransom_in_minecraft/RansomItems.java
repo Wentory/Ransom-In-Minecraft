@@ -13,6 +13,14 @@ import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents;
 public final class RansomItems {
     public static final Supplier<Item> HONEY_POT = register("honey_pot", true);
     public static final Supplier<Item> CRUCIFIX = register("crucifix", false);
+    // Advancement-only icon; not included in creative tabs or recipes.
+    public static final Supplier<Item> STOP_ICON = registerStopIcon();
+    private static Supplier<Item> registerStopIcon() {
+        var id = Identifier.fromNamespaceAndPath(RansomFabric.MODID, "stop_icon");
+        var properties = new Item.Properties().setId(ResourceKey.create(Registries.ITEM, id));
+        Item item = Registry.register(BuiltInRegistries.ITEM, id, new Item(properties));
+        return () -> item;
+    }
     private RansomItems() {}
     private static Supplier<Item> register(String name, boolean honey) {
         var id = Identifier.fromNamespaceAndPath(RansomFabric.MODID, name);

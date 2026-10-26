@@ -61,6 +61,7 @@ public final class CrucifixCircleTest {
                     position.z, player.level().getGameTime(), true, true, false,
                     wielder.getX(), wielder.getY() + 1.2, wielder.getZ());
             CIRCLES.put(player.getUUID(), circle);
+            RansomAdvancements.banished(wielder);
             com.wentory.ransom_in_minecraft.network.RansomServerState.beginCrucifixSpawnCooldown(player);
             RansomPackets.sendToAllPlayers(circle);
             player.level().playSound(null, circle.x(), circle.y(), circle.z(),

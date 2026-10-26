@@ -7,7 +7,6 @@ import net.minecraft.client.renderer.rendertype.*;
 import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.*;
-import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(LivingEntityRenderer.class)
 public abstract class MobBanishmentRendererMixin {
@@ -20,13 +19,13 @@ public abstract class MobBanishmentRendererMixin {
     private void ransom$transparent(LivingEntityRenderState state,boolean visible,boolean transparent,boolean glowing,CallbackInfoReturnable<RenderType> ci){
         if(progress(state)>=0 && visible)ci.setReturnValue(RenderTypes.entityTranslucent(getTextureLocation(state)));
     }
-    @ModifyArgs(method="submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
-            at=@At(value="INVOKE",target="Lnet/minecraft/client/renderer/SubmitNodeCollector;submitModel(Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/rendertype/RenderType;IIILnet/minecraft/client/renderer/texture/TextureAtlasSprite;ILnet/minecraft/client/renderer/feature/ModelFeatureRenderer$CrumblingOverlay;)V"))
-    private void ransom$evaporate(Args args){
-        float progress=progress((LivingEntityRenderState)args.get(1));
-        if(progress<0)return;
-        int color=args.get(6);
-        int alpha=Math.round((color>>>24)*(1-progress));
-        args.set(6,alpha<<24|(progress<.2F?0x93EFFF:color&0xFFFFFF));
+    @ModifyVariable(method="submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
+            at=@At("HEAD"), argsOnly=true, ordinal=0)
+    private net.minecraft.client.renderer.SubmitNodeCollector ransom$banishmentCollector(
+            net.minecraft.client.renderer.SubmitNodeCollector original, LivingEntityRenderState state,
+            com.mojang.blaze3d.vertex.PoseStack pose, net.minecraft.client.renderer.SubmitNodeCollector collector,
+            net.minecraft.client.renderer.state.level.CameraRenderState camera) {
+        float progress=progress(state);
+        return progress<0 ? original : new com.wentory.ransom_in_minecraft.client.BanishmentSubmitCollector(original, progress);
     }
 }

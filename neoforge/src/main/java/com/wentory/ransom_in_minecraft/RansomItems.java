@@ -13,6 +13,8 @@ public final class RansomItems {
     public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(Registries.ITEM, RansomInMinecraft.MODID);
     public static final DeferredHolder<Item, Item> HONEY_POT = ITEMS.register("honey_pot", () -> new HoneyPotItem(properties("honey_pot")));
     public static final DeferredHolder<Item, Item> CRUCIFIX = ITEMS.register("crucifix", () -> new Item(properties("crucifix").durability(100)));
+    // Advancement-only icon; not included in creative tabs or recipes.
+    public static final DeferredHolder<Item, Item> STOP_ICON = ITEMS.register("stop_icon", () -> new Item(properties("stop_icon")));
     private RansomItems() {}
     private static Item.Properties properties(String name) {
         return new Item.Properties().setId(ResourceKey.create(Registries.ITEM,

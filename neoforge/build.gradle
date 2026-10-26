@@ -154,3 +154,44 @@ idea {
 }
 
 
+
+apply from: rootProject.file('gradle/collect-release.gradle')
+
+sourceSets.test.compileClasspath += sourceSets.main.compileClasspath
+sourceSets.test.runtimeClasspath += sourceSets.main.runtimeClasspath
+tasks.register('banishmentRenderTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.wentory.ransom_in_minecraft.client.BanishmentSubmitCollectorTest'
+}
+tasks.named('check') { dependsOn tasks.named('banishmentRenderTest') }
+
+tasks.register('stopMouseTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.wentory.ransom_in_minecraft.client.StopMouseMovementTest'
+}
+tasks.named('check') { dependsOn tasks.named('stopMouseTest') }
+
+tasks.register('stopHeldInputTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.wentory.ransom_in_minecraft.client.StopHeldInputTest'
+}
+tasks.named('check') { dependsOn tasks.named('stopHeldInputTest') }
+
+tasks.register('hijackSpeechTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.wentory.ransom_in_minecraft.HijackChatCommandsTest'
+}
+tasks.named('check') { dependsOn tasks.named('hijackSpeechTest') }
+
+
+tasks.register('encounterResultTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.wentory.ransom_in_minecraft.network.RansomStatePayloadTest'
+}
+
+tasks.named('check') { dependsOn tasks.named('encounterResultTest') }
